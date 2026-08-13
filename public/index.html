@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hailastandup</title>
+<meta name="description" content="Bilete la stand-up, în toată țara.">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#f8f5f1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b4441d'/%3E%3Cpath d='M9.5 11.5h13v9h-13z' fill='none' stroke='%23fffdfa' stroke-width='1.8' stroke-linejoin='round'/%3E%3Cpath d='M16 10v12' stroke='%23fffdfa' stroke-width='1.8' stroke-dasharray='1.6 2.6' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400..600&family=Source+Serif+4:opsz,wght@8..60,400..600&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<a class="skip" href="#app">Sari la conținut</a>
+
+<header class="topbar">
+  <div class="shell topbar__inner">
+    <a class="mark" href="#/">hailastandup</a>
+
+    <nav class="topnav" aria-label="Secțiuni">
+      <a href="#/">Spectacole</a>
+      <a href="#/organizator">Organizator</a>
+    </nav>
+
+    <div class="live">
+      <span class="live__stamp" id="stamp"></span>
+      <button class="btn btn--quiet btn--icon" id="refresh" type="button" data-state="idle">
+        <span class="btn__spin" aria-hidden="true"></span>
+        <span class="btn__label">Actualizează</span>
+      </button>
+    </div>
+  </div>
+  <div class="topbar__note" id="live-note" hidden></div>
+</header>
+
+<main id="app"></main>
+
+<div class="summarybar" id="summarybar" data-open="false"></div>
+
+<script src="data/events.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
