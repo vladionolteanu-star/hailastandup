@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "outputDirectory": "public",
   "functions": {
     "api/events.js": { "maxDuration": 60 },
     "api/event.js": { "maxDuration": 20 }
