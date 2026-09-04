@@ -16,13 +16,17 @@ Strategia și deciziile blocate sunt în `PRODUCT.md`, în rădăcina proiectulu
 | `scraper/titlu.mjs` | Curăță titlul de oraș, sală, categorie și sufixul de repriză. |
 | `scraper/nume.mjs` | Extrage numele comedianților din titlul unui eveniment. |
 | `scraper/snapshot.mjs` | Reface `public/data/events.js`. |
+| `scraper/canale.mjs` | Canalele de YouTube urmărite, cu politica de filtrare a fiecăruia. |
+| `scraper/youtube.mjs` | Citește feedurile publice de canal și alege clipurile de stand-up. |
+| `scraper/clipuri.mjs` | Reface `public/data/clipuri.js`. |
 | `api/events.js` | Scrapează live listingul de pe iaBilet. |
 | `api/event.js` | Ora și tarifele unui spectacol. |
+| `api/clipuri.js` | Citește live feedurile de YouTube. |
 
 ## Ce e pe pagină acum
 
-Headerul (marcă, căutare, oraș), banda de calendar, ziua curentă și blocurile care urmează.
-Restul secțiunilor se adaugă una câte una, pe date reale.
+Headerul (marcă, căutare, oraș), banda de calendar, ziua curentă, blocurile care urmează și
+„Ce a apărut nou". Restul secțiunilor se adaugă una câte una, pe date reale.
 
 `?zi=AAAA-LL-ZZ` deschide altă zi. Folosit ca să vezi stările: zi plină, o singură
 reprezentație, zi goală.
@@ -49,6 +53,29 @@ Un oraș primește bandă proprie doar de la trei showuri în sus, plus orașul 
 primește mereu. Sub prag, orașele intră într-o bandă de coadă, cu orașul scris pe fiecare
 card. Fără regula asta, o zi cu 11 showuri în 5 orașe scotea patru rânduri cu un singur
 card. Blocurile de weekend se grupează pe zi, nu pe oraș.
+
+### Ce a apărut nou
+
+Cele mai recente două clipuri de stand-up de la fiecare canal urmărit, puse cap la cap și
+sortate după dată. Canalele stau în `scraper/canale.mjs`, fiecare cu **ID-ul rezolvat dintr-un
+clip real**, nu dintr-un handle scris din memorie: se deschide pagina clipului și se citește
+`channelId` din ea.
+
+Filtrarea contează, nu e decor. Pe `DA BRAVO!` un singur clip din ultimele 15 e stand-up,
+restul sunt momente din podcast; pe `micul Toma` sunt animații, sketch-uri și vlog. De aceea
+fiecare canal are o politică:
+
+| politică | ce intră |
+|---|---|
+| `standup` | tot, mai puțin ce se declară altceva (podcast, vlog, trailer) |
+| `mixt` | doar ce se declară stand-up în titlu |
+
+Excluderea se uită pe titlul **fără hashtaguri**, fiindcă mulți pun `#podcast` ca etichetă pe
+clipuri care n-au nicio legătură cu un podcast.
+
+Miniaturile: `oardefault.jpg` există doar pentru clipurile verticale și dă 404 pentru cele
+16:9, deci e semnalul de orientare. Fără el, `maxresdefault` al unui Short vine cu bare negre
+pe laturi. Cardurile stau toate pe 9:16, fiindcă majoritatea clipurilor sunt verticale.
 
 ### Calendarul
 
@@ -93,6 +120,7 @@ verificabilă, câmpul nu apare.
 ```bash
 npm run dev               # servește public/ pe :3000
 npm run snapshot          # reface snapshotul de evenimente
+npm run clipuri           # reface snapshotul de clipuri
 ```
 
 ## Parser de nume

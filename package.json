@@ -6,6 +6,7 @@
   "scripts": {
     "snapshot": "node scraper/snapshot.mjs",
     "snapshot:fast": "node scraper/snapshot.mjs --no-details",
-    "dev": "npx --yes serve public"
+    "dev": "npx --yes serve public",
+    "clipuri": "node scraper/clipuri.mjs"
   }
 }
