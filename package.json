@@ -2,7 +2,7 @@
   "name": "hailastandup",
   "private": true,
   "type": "module",
-  "description": "Mockup de platformă de ticketing pentru stand-up, cu date live de pe iaBilet.",
+  "description": "Agregator public de stand-up românesc, pe date de pe iaBilet.",
   "scripts": {
     "snapshot": "node scraper/snapshot.mjs",
     "snapshot:fast": "node scraper/snapshot.mjs --no-details",

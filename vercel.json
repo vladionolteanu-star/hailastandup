@@ -4,5 +4,15 @@
   "functions": {
     "api/events.js": { "maxDuration": 60 },
     "api/event.js": { "maxDuration": 20 }
+  },
+  "images": {
+    "sizes": [240, 320, 420, 560, 720, 900],
+    "qualities": [70, 80],
+    "minimumCacheTTL": 604800,
+    "formats": ["image/webp"],
+    "remotePatterns": [
+      { "protocol": "https", "hostname": "static3.iabilet.ro" },
+      { "protocol": "https", "hostname": "imgcdn3.iabilet.ro" }
+    ]
   }
 }

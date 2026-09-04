@@ -1,6 +1,9 @@
 // Parsare iaBilet, categoria stand-up comedy. Fara dependinte.
 // Folosit de functiile din api/ (live) si de scraper/snapshot.mjs (CLI).
 
+import { curataTitlu } from './titlu.mjs';
+import { numeDinTitlu } from './nume.mjs';
+
 export const ORIGIN = 'https://www.iabilet.ro';
 const LIST = `${ORIGIN}/bilete-stand-up-comedy?filters%5Bcategory%5D%5B0%5D=stand-up-comedy&filtersSubmitted=1`;
 const UA =
@@ -143,13 +146,79 @@ export async function scrapeListing({ maxPages = 15 } = {}) {
   return [...byId.values()].sort((a, b) => (a.startDate ?? '').localeCompare(b.startDate ?? ''));
 }
 
+/**
+ * Campuri derivate, calculate o singura data la impachetare ca sa nu le recalculeze
+ * pagina la fiecare randare: titlul curatat, repriza si numele comediantilor.
+ * `title` ramane brut, exact cum l-a dat sursa.
+ */
+export function imbogateste(ev) {
+  const { titlu, repriza } = curataTitlu(ev);
+  return { ...ev, titlu, repriza, nume: numeDinTitlu(ev.title), pretDeLa: pretDeLa(ev), tip: tipul(ev) };
+}
+
+// Valorile pe care iaBilet le pune in loc de oras cand listarea e o umbrela, nu o reprezentatie.
+const NEORAS = new Set(['romania', 'europa']);
+
+/**
+ * `showing` = o reprezentatie, cu data si sala. `turneu` = listarea-umbrela a unui turneu,
+ * fara ora, fara sala, intinsa pe saptamani. Doar `showing` are ce cauta intr-o zi anume.
+ */
+function tipul(ev) {
+  const oras = String(ev.city ?? '').toLowerCase();
+  const sala = String(ev.venue ?? '').toLowerCase();
+  if (NEORAS.has(oras) || NEORAS.has(sala)) return 'turneu';
+
+  if (ev.startDate && ev.endDate) {
+    const zile = (Date.parse(ev.endDate) - Date.parse(ev.startDate)) / 86400000;
+    if (Number.isFinite(zile) && zile > 3) return 'turneu';
+  }
+  return 'showing';
+}
+
+/** iaBilet lasa des `offers.price` gol desi tarifele exista. Ramane null cand chiar nu e pret. */
+function pretDeLa(ev) {
+  if (typeof ev.priceFrom === 'number' && ev.priceFrom > 0) return ev.priceFrom;
+  const preturi = (ev.tariffs ?? []).map((t) => t.price).filter((n) => typeof n === 'number' && n > 0);
+  return preturi.length ? Math.min(...preturi) : null;
+}
+
+const DIACRITICE = /[ăâîșțĂÂÎȘȚ]/;
+const cheieOras = (s) =>
+  String(s ?? '').normalize('NFD').replace(/[^a-z0-9]/gi, '').toLowerCase();
+
+/**
+ * Sursa scrie si "Brasov", si "Brasov" cu diacritice, pentru acelasi oras. Alege o forma
+ * canonica per oras: castiga varianta cu diacritice, apoi cea mai frecventa. `city` ramane brut.
+ */
+export function canonicOrase(events) {
+  const variante = new Map();
+  for (const e of events) {
+    const k = cheieOras(e.city);
+    if (!k) continue;
+    if (!variante.has(k)) variante.set(k, new Map());
+    const v = variante.get(k);
+    v.set(e.city, (v.get(e.city) ?? 0) + 1);
+  }
+
+  const canonic = new Map();
+  for (const [k, v] of variante) {
+    const castigator = [...v.entries()].sort(
+      (a, b) => (DIACRITICE.test(b[0]) ? 1 : 0) - (DIACRITICE.test(a[0]) ? 1 : 0) || b[1] - a[1]
+    )[0][0];
+    canonic.set(k, castigator);
+  }
+
+  return events.map((e) => ({ ...e, oras: canonic.get(cheieOras(e.city)) ?? e.city }));
+}
+
 export function payloadOf(events, extra = {}) {
+  const imbogatite = canonicOrase(events.map(imbogateste));
   return {
     source: 'iabilet.ro/bilete-stand-up-comedy',
     scrapedAt: new Date().toISOString(),
-    count: events.length,
-    cities: [...new Set(events.map((e) => e.city).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ro')),
-    events,
+    count: imbogatite.length,
+    cities: [...new Set(imbogatite.map((e) => e.oras).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ro')),
+    events: imbogatite,
     ...extra,
   };
 }

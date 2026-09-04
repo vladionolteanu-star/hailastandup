@@ -1,5 +1,3 @@
-import fs from 'fs';
-
 // Cuvinte care arata ca titlul e o descriere de eveniment, nu un nume de om.
 const GENERIC = /stand[-\s]?up|comedy|show|gala|open mic|turneu|filmare|special|roast|seara|seară|best of|improv/i;
 const ZGOMOT = /^(show|etapa|ora|duminica|duminică|sambata|sâmbătă|vineri|joi|miercuri|marti|marți|luni)\b/i;
@@ -42,7 +40,10 @@ export function numeDinTitlu(titlu) {
     );
 }
 
+// CLI: `node scraper/nume.mjs test`. `fs` se incarca doar aici, ca sa nu intre in bundle-ul
+// functiilor din api/, care importa doar parserul.
 if (process.argv[2] === 'test') {
+  const fs = (await import('node:fs')).default;
   let raw = fs.readFileSync('site/public/data/events.js', 'utf8')
     .replace(/^\s*window\.EVENTS_DATA\s*=\s*/, '').replace(/;\s*$/, '');
   const ev = JSON.parse(raw).events.filter(e => !e.multiDay && e.city !== 'Romania' && e.startDate >= '2026-09-03');
