@@ -21,11 +21,39 @@ Strategia și deciziile blocate sunt în `PRODUCT.md`, în rădăcina proiectulu
 
 ## Ce e pe pagină acum
 
-Headerul (marcă, căutare, oraș) și secțiunea zilei: showurile de azi, grupate pe oraș,
-cu orașul tău primul. Restul secțiunilor se adaugă una câte una, pe date reale.
+Headerul (marcă, căutare, oraș), banda de calendar, ziua curentă și blocurile care urmează.
+Restul secțiunilor se adaugă una câte una, pe date reale.
 
 `?zi=AAAA-LL-ZZ` deschide altă zi. Folosit ca să vezi stările: zi plină, o singură
 reprezentație, zi goală.
+
+### Blocurile care urmează
+
+„Mâine" și „poimâine" apar **doar când nu sunt deja în fereastra de weekend**, altfel
+aceleași showuri ar fi pe pagină de două ori. Vinerea, mâine și poimâine sunt sâmbătă și
+duminică, deci rămâne un singur bloc, „Restul weekendului". Sub două zile rămase, weekendul
+nu mai merită bloc propriu și zilele intră ca blocuri normale.
+
+| azi e | ies |
+|---|---|
+| luni – joi | Mâine, eventual Poimâine, apoi Weekendul ăsta |
+| vineri, sâmbătă | Restul weekendului |
+| duminică | Mâine, Poimâine, Weekendul viitor |
+
+Eticheta e relativă doar când ziua ancoră chiar e azi. Pe `?zi=`, blocurile poartă date.
+Fiecare bloc se pliază, iar starea se ține în `localStorage`.
+
+### Cum se rup benzile
+
+Un oraș primește bandă proprie doar de la trei showuri în sus, plus orașul ales, care o
+primește mereu. Sub prag, orașele intră într-o bandă de coadă, cu orașul scris pe fiecare
+card. Fără regula asta, o zi cu 11 showuri în 5 orașe scotea patru rânduri cu un singur
+card. Blocurile de weekend se grupează pe zi, nu pe oraș.
+
+### Calendarul
+
+42 de zile de la azi, cu numărul de showuri sub fiecare dată, weekendurile marcate discret,
+zilele goale stinse și neinteractive. Click pe o zi înseamnă `?zi=`, deci link partajabil.
 
 ## Câmpuri derivate
 

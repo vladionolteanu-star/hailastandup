@@ -135,6 +135,44 @@ h1,h2,h3{margin:0;font-weight:600;letter-spacing:-.02em}
 }
 .filtru button:hover{background:var(--bg);color:var(--text)}
 
+/* ---------- calendarul ---------- */
+.calendar{
+  display:flex;gap:2px;overflow-x:auto;overscroll-behavior-x:contain;
+  margin:14px -24px 0;padding:2px 24px 20px;scrollbar-width:thin;
+}
+.calendar:empty{display:none}
+.zi-cal{
+  flex:0 0 auto;min-width:46px;padding:7px 7px 8px;border-radius:8px;
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+  border:1px solid transparent;text-align:center;
+  transition:background .16s var(--e),border-color .16s var(--e);
+}
+.zi-cal__d{font-size:10.5px;color:var(--text-3);line-height:1.1}
+.zi-cal__n{font-size:15px;font-weight:550;line-height:1.15;font-variant-numeric:tabular-nums;white-space:nowrap}
+.zi-cal__c{font-size:11.5px;color:var(--text-3);line-height:1.1;font-variant-numeric:tabular-nums;min-height:13px}
+.zi-cal--we{background:color-mix(in oklab,var(--panou) 60%,transparent)}
+a.zi-cal:hover{background:var(--panou);border-color:var(--linie-2)}
+.zi-cal--gol{opacity:.32}
+.zi-cal[aria-current="date"] .zi-cal__n{text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1.5px}
+.zi-cal--ales,a.zi-cal--ales:hover{background:var(--text);border-color:var(--text)}
+.zi-cal--ales .zi-cal__d,.zi-cal--ales .zi-cal__n,.zi-cal--ales .zi-cal__c{color:var(--bg)}
+
+/* ---------- blocuri pliabile ---------- */
+.bloc{border-top:1px solid var(--linie);margin-top:34px;padding-top:22px}
+.bloc__cap{display:flex;align-items:baseline;gap:6px 14px;flex-wrap:wrap;margin-bottom:2px}
+.bloc__titlu{margin:0}
+.bloc__titlu button{
+  display:inline-flex;align-items:center;gap:8px;padding:2px 8px 2px 4px;margin-left:-4px;
+  border:0;background:none;border-radius:7px;cursor:pointer;
+  font-size:1.12rem;font-weight:600;letter-spacing:-.024em;
+  transition:background .16s var(--e);
+}
+.bloc__titlu button:hover{background:var(--panou)}
+.bloc__sageata{flex:none;color:var(--text-3);transition:transform .2s var(--e)}
+.bloc__titlu button[aria-expanded="false"] .bloc__sageata{transform:rotate(-90deg)}
+.bloc__meta{font-size:13px;color:var(--text-2)}
+.bloc__corp{padding-top:2px}
+
 /* ---------- benzi de oraș / zi ---------- */
 .benzi{padding-bottom:64px}
 .banda{
@@ -215,6 +253,8 @@ h1,h2,h3{margin:0;font-weight:600;letter-spacing:-.02em}
   .lat{padding:0 16px}
   .cap h1{font-size:1.5rem}
   .cap{padding-top:24px}
+  .calendar{margin-left:-16px;margin-right:-16px;padding-left:16px;padding-right:16px}
+  .bloc__titlu button{font-size:1.02rem}
   .rafturi{grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:20px 14px}
   .marca{font-size:14px}
   .sus__in{gap:10px}
@@ -264,7 +304,9 @@ h1,h2,h3{margin:0;font-weight:600;letter-spacing:-.02em}
     </div>
     <div class="cap__dr" id="cap-dr"></div>
   </div>
+  <div class="calendar" id="calendar" role="group" aria-label="Alege o zi"></div>
   <div class="benzi" id="benzi"></div>
+  <div id="urmeaza"></div>
 </main>
 
 <footer class="lat subsol" id="subsol"></footer>
@@ -411,10 +453,16 @@ h1,h2,h3{margin:0;font-weight:600;letter-spacing:-.02em}
 
   function plural(n, unu, multe) { return n + ' ' + (n === 1 ? unu : multe); }
 
-  function grupeaza(lista) {
+  /* Un oras merita banda proprie doar daca umple un rand. Sub pragul asta ar iesi o eticheta
+   * si trei coloane goale, deci orasele subtiri se string intr-o singura banda de coada. */
+  var PRAG_BANDA = 3;
+
+  function dupaOra(a, b) { return (a.time || '~').localeCompare(b.time || '~'); }
+
+  function grupeaza(lista, mod, acum) {
     var pe = new Map();
 
-    if (stare.filtru) {
+    if (mod === 'zi') {
       lista.forEach(function (e) {
         if (!pe.has(e.startDate)) pe.set(e.startDate, []);
         pe.get(e.startDate).push(e);
@@ -423,12 +471,12 @@ h1,h2,h3{margin:0;font-weight:600;letter-spacing:-.02em}
         return {
           eticheta: cuMajuscula(numeZi(par[0])),
           sub: par[0] === AZI_REAL ? 'azi' : plural(par[1].length, 'show', 'showuri'),
-          ev: par[1]
+          ev: par[1].sort(dupaOra),
+          aratOras: true
         };
       });
     }
 
-    var acum = minuteAcum();
     lista.forEach(function (e) {
       var o = e.oras || e.city || 'Fără oraș';
       if (!pe.has(o)) pe.set(o, []);
@@ -442,20 +490,39 @@ h1,h2,h3{margin:0;font-weight:600;letter-spacing:-.02em}
         return pa - pb || (a.time || '~').localeCompare(b.time || '~');
       });
     });
-    return Array.from(pe.entries())
-      .sort(function (a, b) {
-        if (a[0] === stare.oras) return -1;
-        if (b[0] === stare.oras) return 1;
-        return b[1].length - a[1].length || a[0].localeCompare(b[0], 'ro');
-      })
-      .map(function (par) {
-        return { eticheta: par[0], sub: plural(par[1].length, 'show', 'showuri'), ev: par[1] };
+    var ordonate = Array.from(pe.entries()).sort(function (a, b) {
+      if (a[0] === stare.oras) return -1;
+      if (b[0] === stare.oras) return 1;
+      return b[1].length - a[1].length || a[0].localeCompare(b[0], 'ro');
+    });
+
+    var proprii = [], coada = [];
+    ordonate.forEach(function (par) {
+      if (par[0] === stare.oras || par[1].length >= PRAG_BANDA) proprii.push(par);
+      else coada = coada.concat(par[1]);
+    });
+
+    var benzi = proprii.map(function (par) {
+      return { eticheta: par[0], sub: plural(par[1].length, 'show', 'showuri'), ev: par[1], aratOras: false };
+    });
+
+    if (coada.length) {
+      var orase = new Set(coada.map(function (e) { return e.oras || e.city; })).size;
+      benzi.push({
+        /* Cand nu e nimic altceva pe pagina, o eticheta „Alte orașe" n-ar avea fata de ce. */
+        eticheta: benzi.length ? (orase === 1 ? (coada[0].oras || coada[0].city) : 'Alte orașe') : '',
+        sub: benzi.length ? plural(orase === 1 ? coada.length : orase, orase === 1 ? 'show' : 'oraș', orase === 1 ? 'showuri' : 'orașe') : '',
+        ev: coada.sort(dupaOra),
+        aratOras: true
       });
+    }
+
+    return benzi;
   }
 
   /* ---------- randare ---------- */
 
-  function cardShow(e, acum) {
+  function cardShow(e, acum, aratOras) {
     var t = inMinute(e.time);
     var trecut = acum >= 0 && t != null && t < acum && !stare.filtru;
     var clase = 'show' + (e.soldOut ? ' show--epuizat' : '') + (trecut ? ' show--trecut' : '');
@@ -477,7 +544,7 @@ h1,h2,h3{margin:0;font-weight:600;letter-spacing:-.02em}
       '<div class="show__afis">' + afis + stareEt + '</div>' +
       '<div class="show__meta nums">' +
         (e.time ? '<span class="show__ora">' + esc(e.time) + '</span>' : '') +
-        '<span class="show__sala">' + esc(e.venue || e.oras || e.city || '') + '</span>' +
+        '<span class="show__sala">' + esc(numeLoc(e, aratOras)) + '</span>' +
       '</div>' +
       '<div class="show__nume">' + esc(e.titlu) + '</div>' +
       '<div class="show__jos nums">' +
@@ -485,6 +552,107 @@ h1,h2,h3{margin:0;font-weight:600;letter-spacing:-.02em}
         (e.repriza ? '<span class="show__rep">repriza ' + e.repriza + '</span>' : '') +
       '</div>' +
     '</a>';
+  }
+
+  /* Cand banda e un oras, orasul e in eticheta. Cand banda e o zi, trebuie pus pe card. */
+  function numeLoc(e, aratOras) {
+    var oras = e.oras || e.city || '';
+    var sala = e.venue || '';
+    if (!aratOras) return sala || oras;
+    if (!sala) return oras;
+    return oras && oras !== sala ? sala + ', ' + oras : sala;
+  }
+
+  function benziHtml(grupuri, acum) {
+    return grupuri.map(function (g) {
+      return '<section class="banda">' +
+        '<div class="banda__et">' +
+          (g.eticheta ? '<b>' + esc(g.eticheta) + '</b><span class="nums">' + esc(g.sub) + '</span>' : '') +
+        '</div>' +
+        '<div class="rafturi">' +
+          g.ev.map(function (e) { return cardShow(e, acum, g.aratOras); }).join('') +
+        '</div>' +
+      '</section>';
+    }).join('');
+  }
+
+  /* ---------- ce urmează după ziua ancoră ---------- */
+
+  var ZILE_SCURT = ['dum', 'lun', 'mar', 'mie', 'joi', 'vin', 'sâm'];
+  var LUNI_SCURT = ['ian', 'feb', 'mar', 'apr', 'mai', 'iun', 'iul', 'aug', 'sep', 'oct', 'noi', 'dec'];
+
+  function plusZile(zi, n) {
+    var d = dinIso(zi);
+    d.setDate(d.getDate() + n);
+    return iso(d);
+  }
+
+  /* Fereastra vineri–duminică din care face parte ziua, sau următoarea dacă e deja duminică. */
+  function fereastraWeekend(zi) {
+    var g = dinIso(zi).getDay();
+    var deplasare = g === 0 ? 5 : (g === 6 ? -1 : 5 - g);
+    var vineri = plusZile(zi, deplasare);
+    return [vineri, plusZile(vineri, 1), plusZile(vineri, 2)];
+  }
+
+  function evDinZile(zile) {
+    return SHOWURI.filter(function (e) {
+      return zile.some(function (z) { return inZi(e, z); });
+    });
+  }
+
+  function numeScurt(zi) {
+    var d = dinIso(zi);
+    return ZILE_SCURT[d.getDay()] + ' ' + d.getDate();
+  }
+
+  /*
+   * Mâine și poimâine apar doar când NU sunt deja în fereastra de weekend, altfel aceleași
+   * showuri ar fi pe pagină de două ori. Vinerea, mâine și poimâine sunt sâmbătă și duminică,
+   * deci rămâne doar blocul de weekend. Sub două zile rămase, weekendul nu merită bloc propriu.
+   */
+  function blocuriUrmatoare(ancora) {
+    var relativ = ancora === AZI_REAL;
+    var we = fereastraWeekend(ancora).filter(function (z) { return z > ancora; });
+    var grupWe = we.length >= 2 ? we : [];
+    var blocuri = [];
+
+    for (var n = 1; n <= 2; n++) {
+      var z = plusZile(ancora, n);
+      if (grupWe.indexOf(z) !== -1) continue;
+      var ev = evDinZile([z]);
+      if (!ev.length) continue;
+      blocuri.push({
+        tip: n === 1 ? 'maine' : 'poimaine',
+        eticheta: relativ ? (n === 1 ? 'Mâine' : 'Poimâine') : cuMajuscula(numeZi(z)),
+        sufix: relativ ? numeZi(z).split(',')[0] : '',
+        zile: [z], mod: 'oras', ev: ev
+      });
+    }
+
+    if (grupWe.length) {
+      var evWe = evDinZile(grupWe);
+      if (evWe.length) {
+        var g = dinIso(ancora).getDay();
+        var et = !relativ ? 'Weekendul' : (g === 5 || g === 6) ? 'Restul weekendului'
+               : g === 0 ? 'Weekendul viitor' : 'Weekendul ăsta';
+        blocuri.push({
+          tip: 'weekend',
+          eticheta: et,
+          sufix: numeScurt(grupWe[0]) + ' – ' + numeScurt(grupWe[grupWe.length - 1]),
+          zile: grupWe, mod: 'zi', ev: evWe
+        });
+      }
+    }
+
+    return blocuri.sort(function (a, b) { return a.zile[0].localeCompare(b.zile[0]); });
+  }
+
+  function blocDeschis(tip) {
+    try { return localStorage.getItem('hls.bloc.' + tip) !== 'inchis'; } catch (err) { return true; }
+  }
+  function salveazaBloc(tip, deschis) {
+    try { localStorage.setItem('hls.bloc.' + tip, deschis ? 'deschis' : 'inchis'); } catch (err) { /* mod privat */ }
   }
 
   function urmatorulDupa(zi) {
@@ -539,6 +707,102 @@ h1,h2,h3{margin:0;font-weight:600;letter-spacing:-.02em}
       plural(SHOWURI.length, 'show în bază', 'showuri în bază') + '.';
   }
 
+  /* ---------- calendarul ---------- */
+
+  function numaraPeZi(nrZile) {
+    var pe = new Map(), ord = [];
+    for (var i = 0; i < nrZile; i++) {
+      var z = plusZile(AZI_REAL, i);
+      pe.set(z, 0);
+      ord.push(z);
+    }
+    SHOWURI.forEach(function (e) {
+      if (e.multiDay) {
+        ord.forEach(function (z) { if (inZi(e, z)) pe.set(z, pe.get(z) + 1); });
+      } else if (pe.has(e.startDate)) {
+        pe.set(e.startDate, pe.get(e.startDate) + 1);
+      }
+    });
+    return { pe: pe, ord: ord };
+  }
+
+  function randeazaCalendar() {
+    var cal = $('#calendar');
+    if (stare.filtru) { cal.innerHTML = ''; return; }
+
+    var c = numaraPeZi(42);
+    var lunaAnt = -1;
+
+    cal.innerHTML = c.ord.map(function (z) {
+      var d = dinIso(z);
+      var n = c.pe.get(z);
+      var g = d.getDay();
+      var lunaNoua = d.getMonth() !== lunaAnt;
+      lunaAnt = d.getMonth();
+
+      var clase = 'zi-cal' +
+        ((g === 5 || g === 6 || g === 0) ? ' zi-cal--we' : '') +
+        (n ? '' : ' zi-cal--gol') +
+        (z === ZI ? ' zi-cal--ales' : '');
+
+      var corp =
+        '<span class="zi-cal__d">' + ZILE_SCURT[g] + '</span>' +
+        '<span class="zi-cal__n">' + d.getDate() + (lunaNoua ? ' ' + LUNI_SCURT[d.getMonth()] : '') + '</span>' +
+        '<span class="zi-cal__c">' + (n || '') + '</span>';
+
+      var comune = 'class="' + clase + '"' + (z === AZI_REAL ? ' aria-current="date"' : '');
+
+      return n
+        ? '<a ' + comune + ' href="?zi=' + z + '" aria-label="' + esc(numeZi(z)) + ', ' +
+          esc(plural(n, 'show', 'showuri')) + '">' + corp + '</a>'
+        : '<span ' + comune + ' aria-label="' + esc(numeZi(z)) + ', niciun show">' + corp + '</span>';
+    }).join('');
+
+    /* Ziua deschisă se aduce în centrul benzii, fără să miște pagina pe verticală. */
+    var ales = cal.querySelector('.zi-cal--ales');
+    if (ales) cal.scrollLeft = ales.offsetLeft - cal.clientWidth / 2 + ales.offsetWidth / 2;
+  }
+
+  /* ---------- blocurile care urmează ---------- */
+
+  function randeazaUrmeaza() {
+    var cont = $('#urmeaza');
+    if (stare.filtru) { cont.innerHTML = ''; return; }
+
+    cont.innerHTML = blocuriUrmatoare(ZI).map(function (b) {
+      var orase = new Set(b.ev.map(function (e) { return e.oras || e.city; })).size;
+      var deschis = blocDeschis(b.tip);
+
+      return '<section class="bloc">' +
+        '<div class="bloc__cap">' +
+          '<h2 class="bloc__titlu">' +
+            '<button type="button" data-bloc="' + esc(b.tip) + '" aria-expanded="' + deschis + '">' +
+              '<svg class="bloc__sageata" width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true">' +
+                '<path d="M2.6 4.6 6 8l3.4-3.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>' +
+              '</svg>' + esc(b.eticheta) +
+            '</button>' +
+          '</h2>' +
+          '<span class="bloc__meta nums">' +
+            (b.sufix ? esc(b.sufix) + ' · ' : '') +
+            esc(plural(b.ev.length, 'show', 'showuri')) + ', în ' + esc(plural(orase, 'oraș', 'orașe')) +
+          '</span>' +
+        '</div>' +
+        '<div class="bloc__corp"' + (deschis ? '' : ' hidden') + '>' +
+          benziHtml(grupeaza(b.ev, b.mod, -1), -1) +
+        '</div>' +
+      '</section>';
+    }).join('');
+
+    Array.prototype.forEach.call(cont.querySelectorAll('[data-bloc]'), function (btn) {
+      btn.addEventListener('click', function () {
+        var deschis = btn.getAttribute('aria-expanded') !== 'true';
+        btn.setAttribute('aria-expanded', String(deschis));
+        btn.closest('.bloc').querySelector('.bloc__corp').hidden = !deschis;
+        salveazaBloc(btn.getAttribute('data-bloc'), deschis);
+      });
+    });
+  }
+
   function randeaza() {
     var lista = evenimenteDeAfisat();
     var acum = minuteAcum();
@@ -563,17 +827,16 @@ h1,h2,h3{margin:0;font-weight:600;letter-spacing:-.02em}
           '<small>Un email pe săptămână, cu ce se joacă. Te dezabonezi dintr-un click.</small>' +
         '</div>';
       $('#forma-gol').addEventListener('submit', function (ev) { ev.preventDefault(); });
+      randeazaCalendar();
+      randeazaUrmeaza();
       randeazaSubsol();
       return;
     }
 
-    benzi.innerHTML = grupeaza(lista).map(function (g) {
-      return '<section class="banda">' +
-        '<div class="banda__et"><b>' + esc(g.eticheta) + '</b><span class="nums">' + esc(g.sub) + '</span></div>' +
-        '<div class="rafturi">' + g.ev.map(function (e) { return cardShow(e, acum); }).join('') + '</div>' +
-      '</section>';
-    }).join('');
+    benzi.innerHTML = benziHtml(grupeaza(lista, stare.filtru ? 'zi' : 'oras', acum), acum);
 
+    randeazaCalendar();
+    randeazaUrmeaza();
     randeazaSubsol();
   }
 
