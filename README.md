@@ -16,9 +16,11 @@ Strategia și deciziile blocate sunt în `PRODUCT.md`, în rădăcina proiectulu
 | `scraper/titlu.mjs` | Curăță titlul de oraș, sală, categorie și sufixul de repriză. |
 | `scraper/nume.mjs` | Extrage numele comedianților din titlul unui eveniment. |
 | `scraper/snapshot.mjs` | Reface `public/data/events.js`. |
-| `scraper/canale.mjs` | Canalele de YouTube urmărite, cu politica de filtrare a fiecăruia. |
-| `scraper/youtube.mjs` | Citește feedurile publice de canal și alege clipurile de stand-up. |
+| `scraper/canale.mjs` | Comedianții urmăriți: canal, handle, alias-uri, politică de filtrare. |
+| `scraper/youtube.mjs` | Feedurile RSS de canal, pentru „Ce a apărut nou" de pe prima pagină. |
 | `scraper/clipuri.mjs` | Reface `public/data/clipuri.js`. |
+| `scraper/youtube-api.mjs` | Arhiva completă a unui canal, prin YouTube Data API v3. |
+| `scraper/arhiva.mjs` | Reface `public/data/arhiva.js`. Cere `YOUTUBE_API_KEY`. |
 | `api/events.js` | Scrapează live listingul de pe iaBilet. |
 | `api/event.js` | Ora și tarifele unui spectacol. |
 | `api/clipuri.js` | Citește live feedurile de YouTube. |
@@ -56,8 +58,11 @@ card. Blocurile de weekend se grupează pe zi, nu pe oraș.
 
 ### Ce a apărut nou
 
-Cele mai recente două clipuri de stand-up de la fiecare canal urmărit, puse cap la cap și
-sortate după dată. Canalele stau în `scraper/canale.mjs`, fiecare cu **ID-ul rezolvat dintr-un
+Cele mai recente două clipuri de stand-up de la fiecare canal urmărit, **din ultimele 120 de
+zile**, puse cap la cap și sortate după dată. Fereastra contează: cu nouă canale și „ultimele
+două de la fiecare", fără ea ar ajunge sub un titlu care spune „nou" și clipuri de acum șase
+luni, de la artiști care pur și simplu n-au mai postat. Cine n-a postat recent nu apare aici;
+arhiva lui stă pe pagina artistului. Canalele stau în `scraper/canale.mjs`, fiecare cu **ID-ul rezolvat dintr-un
 clip real**, nu dintr-un handle scris din memorie: se deschide pagina clipului și se citește
 `channelId` din ea.
 
@@ -76,6 +81,22 @@ clipuri care n-au nicio legătură cu un podcast.
 Miniaturile: `oardefault.jpg` există doar pentru clipurile verticale și dă 404 pentru cele
 16:9, deci e semnalul de orientare. Fără el, `maxresdefault` al unui Short vine cu bare negre
 pe laturi. Cardurile stau toate pe 9:16, fiindcă majoritatea clipurilor sunt verticale.
+
+### Arhiva completă
+
+RSS-ul dă **15 clipuri pe canal, plafon fix**, iar cele nouă canale urmărite au împreună peste
+3.500 de clipuri: RSS acoperă sub 5% din arhivă. În plus, doar API-ul dă **durata**, iar durata
+e singurul mod onest de a separa un special de o oră de un Short de 40 de secunde — titlul nu
+spune nicăieri cât ține clipul.
+
+```bash
+npm run arhiva                # toate canalele active
+node scraper/arhiva.mjs micul-toma   # doar unul
+```
+
+Cheia se pune în `site/.env.local` (`YOUTUBE_API_KEY=...`, fișierul e în `.gitignore`) și în
+Environment Variables pe Vercel. Costul: lista de încărcări e 1 unitate la 50 de clipuri,
+detaliile la fel, deci toată arhiva costă ~150 din cele 10.000 de unități pe zi.
 
 ### Calendarul
 
@@ -120,7 +141,8 @@ verificabilă, câmpul nu apare.
 ```bash
 npm run dev               # servește public/ pe :3000
 npm run snapshot          # reface snapshotul de evenimente
-npm run clipuri           # reface snapshotul de clipuri
+npm run clipuri           # reface snapshotul de clipuri recente
+npm run arhiva            # reface arhiva completa (cere YOUTUBE_API_KEY)
 ```
 
 ## Parser de nume

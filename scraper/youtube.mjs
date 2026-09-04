@@ -1,7 +1,7 @@
 // Citeste feedurile publice ale canalelor din canale.mjs. Fara cheie de API, fara dependinte.
 // Feedul da ultimele 15 clipuri ale unui canal, cu titlu, data si numarul de vizualizari.
 
-import { CANALE } from './canale.mjs';
+import { CANALE_ACTIVE } from './canale.mjs';
 
 const FEED = 'https://www.youtube.com/feeds/videos.xml?channel_id=';
 const UA =
@@ -90,19 +90,28 @@ async function esteVertical(id) {
   }
 }
 
-/** @param {number} peCanal cate clipuri se iau de la fiecare canal */
-export async function adunaClipuri({ peCanal = 2 } = {}) {
+/**
+ * Feedul de pe prima pagina, nu arhiva. Cu 9 canale si „ultimele 2 de la fiecare", fara o
+ * fereastra de timp ar ajunge sub titlul „Ce a aparut nou" si clipuri de acum sase luni,
+ * de la artisti care pur si simplu n-au mai postat. Arhiva completa sta pe pagina artistului.
+ *
+ * @param {number} peCanal cate clipuri se iau de la fiecare canal
+ * @param {number} zile cat de vechi poate fi cel mai vechi clip aratat
+ */
+export async function adunaClipuri({ peCanal = 2, zile = 120 } = {}) {
+  const prag = new Date(Date.now() - zile * 86400000).toISOString();
   const rezultate = await Promise.all(
-    CANALE.map(async (c) => {
+    CANALE_ACTIVE.map(async (c) => {
       try {
         const clipuri = parseFeed(await get(FEED + c.id))
-          .filter((v) => esteStandup(v.titlu, c.politica))
+          .filter((v) => esteStandup(v.titlu, c.politica) && v.publicat >= prag)
           .sort((a, b) => b.publicat.localeCompare(a.publicat))
           .slice(0, peCanal)
           .map((v) => ({
             ...v,
             titlu: curataTitluClip(v.titlu),
             nume: c.nume,
+            slug: c.slug,
             canal: c.canal,
             canalId: c.id,
             url: `https://www.youtube.com/watch?v=${v.id}`,
@@ -133,7 +142,9 @@ export async function adunaClipuri({ peCanal = 2 } = {}) {
   return {
     source: 'youtube.com, feeduri publice de canal',
     culesLa: new Date().toISOString(),
-    canale: CANALE.length,
+    zile,
+    canaleUrmarite: CANALE_ACTIVE.length,
+    canale: new Set(clipuri.map((v) => v.canalId)).size,
     esecuri: rezultate.filter((r) => r.eroare).map((r) => ({ canal: r.canal, eroare: r.eroare })),
     count: clipuri.length,
     clipuri,

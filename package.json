@@ -7,6 +7,7 @@
     "snapshot": "node scraper/snapshot.mjs",
     "snapshot:fast": "node scraper/snapshot.mjs --no-details",
     "dev": "npx --yes serve public",
-    "clipuri": "node scraper/clipuri.mjs"
+    "clipuri": "node scraper/clipuri.mjs",
+    "arhiva": "node scraper/arhiva.mjs"
   }
 }
