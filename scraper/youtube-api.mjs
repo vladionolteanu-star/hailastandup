@@ -10,6 +10,8 @@
 //
 // Cheia se ia din YOUTUBE_API_KEY si nu se scrie niciodata in cod sau in date.
 
+import { esteStandup, felul } from './fel.mjs';
+
 const API = 'https://www.googleapis.com/youtube/v3';
 
 export function cheie() {
@@ -45,18 +47,6 @@ export function durataInSecunde(iso) {
   if (!m) return null;
   const [, z, o, min, s] = m.map((x) => (x == null ? 0 : Number(x)));
   return z * 86400 + o * 3600 + min * 60 + s;
-}
-
-/**
- * Felul clipului, dupa durata. Praguri alese ca sa desparta lucruri care chiar sunt diferite:
- * un special e o ora de scena, un set e un moment de club, un clip e un extras, un scurt e Short.
- */
-export function felul(secunde) {
-  if (secunde == null) return 'necunoscut';
-  if (secunde >= 1200) return 'special';
-  if (secunde >= 300) return 'set';
-  if (secunde > 60) return 'clip';
-  return 'scurt';
 }
 
 /** Toate id-urile de clip ale unui canal, in ordinea incarcarii. */
@@ -96,7 +86,6 @@ export async function detalii(iduri) {
       out.push({
         id: v.id,
         titlu: (v.snippet?.title ?? '').trim(),
-        descriere: (v.snippet?.description ?? '').slice(0, 400),
         publicat: v.snippet?.publishedAt ?? null,
         durata: secunde,
         fel: felul(secunde),
@@ -113,8 +102,14 @@ export async function detalii(iduri) {
 /** Arhiva unui canal, cea mai noua incarcare prima. */
 export async function arhivaCanalului(canal, { max = 5000 } = {}) {
   const iduri = await idurileCanalului(canal.id, { max });
-  const clipuri = (await detalii(iduri))
-    .map((v) => ({ ...v, slug: canal.slug, nume: canal.nume, canal: canal.canal, canalId: canal.id }))
+  const tot = await detalii(iduri);
+
+  // Se pastreaza doar stand-up-ul. Restul canalului (livestreamuri, animatii, vlog) ramane
+  // pe YouTube: aici e un site de stand-up, nu o oglinda a canalului.
+  const clipuri = tot
+    .filter((v) => esteStandup(v.titlu, canal.politica))
+    .map((v) => ({ ...v, slug: canal.slug, nume: canal.nume }))
     .sort((a, b) => String(b.publicat).localeCompare(String(a.publicat)));
-  return { ...canal, cerute: iduri.length, count: clipuri.length, clipuri };
+
+  return { ...canal, incarcate: tot.length, count: clipuri.length, clipuri };
 }

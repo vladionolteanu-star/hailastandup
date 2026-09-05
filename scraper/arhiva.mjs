@@ -59,4 +59,10 @@ const payload = {
 
 await mkdir(dirname(OUT), { recursive: true });
 await writeFile(OUT, `window.ARHIVA_DATA = ${JSON.stringify(payload)};\n`, 'utf8');
+
+// Lista scurta a celor care chiar au pagina. Prima pagina o incarca in locul arhivei intregi,
+// ca sa nu trimita omul catre o pagina goala.
+const CU_PAGINA = resolve(ROOT, 'public/data/artisti.js');
+const listaSlug = JSON.stringify(artisti.filter((a) => a.count).map((a) => a.slug));
+await writeFile(CU_PAGINA, 'window.ARTISTI_CU_PAGINA = ' + listaSlug + ';' + String.fromCharCode(10), 'utf8');
 console.log(`\nscris ${OUT}\n${payload.count} clipuri, ${payload.canale} canale`);

@@ -16,287 +16,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400..600&display=swap">
-<style>
-:root{
-  --bg:oklch(0.993 0.001 265);
-  --panou:oklch(0.972 0.002 265);
-  --linie:oklch(0.912 0.003 265);
-  --linie-2:oklch(0.947 0.002 265);
-  --text:oklch(0.205 0.006 265);
-  --text-2:oklch(0.535 0.010 265);
-  --text-3:oklch(0.678 0.009 265);
-  --semnal:oklch(0.572 0.198 27);
-  --ring:oklch(0.205 0.006 265/.10);
-  --umbra:0 10px 30px -14px oklch(0.205 0.006 265/.26);
-  --r:10px;
-  --r-ctl:8px;
-  --e:cubic-bezier(.22,1,.36,1);
-  --f:"Geist","Segoe UI",system-ui,sans-serif;
-}
-@media (prefers-color-scheme:dark){
-  :root:not([data-theme="light"]){
-    --bg:oklch(0.172 0.004 265);
-    --panou:oklch(0.214 0.005 265);
-    --linie:oklch(0.290 0.006 265);
-    --linie-2:oklch(0.244 0.005 265);
-    --text:oklch(0.964 0.002 265);
-    --text-2:oklch(0.688 0.008 265);
-    --text-3:oklch(0.556 0.008 265);
-    --semnal:oklch(0.682 0.183 27);
-    --ring:oklch(0.964 0.002 265/.13);
-    --umbra:0 10px 30px -14px oklch(0 0 0/.62);
-  }
-}
-
-*{box-sizing:border-box}
-[hidden]{display:none!important}
-html{-webkit-text-size-adjust:100%}
-body{
-  margin:0;background:var(--bg);color:var(--text);
-  font-family:var(--f);font-size:15px;line-height:1.5;
-  -webkit-font-smoothing:antialiased;
-}
-img{display:block;max-width:100%}
-a{color:inherit;text-decoration:none}
-button,input{font:inherit;font-family:var(--f);color:inherit}
-h1,h2,h3{margin:0;font-weight:600;letter-spacing:-.02em}
-:focus-visible{outline:2px solid var(--text);outline-offset:2px;border-radius:4px}
-.lat{max-width:1180px;margin:0 auto;padding:0 24px}
-.nums{font-variant-numeric:tabular-nums}
-
-/* ---------- header ---------- */
-.sus{position:sticky;top:0;z-index:30;background:var(--bg);border-bottom:1px solid var(--linie-2)}
-.sus__in{display:flex;align-items:center;gap:14px;height:56px}
-.marca{font-size:15px;font-weight:600;letter-spacing:-.02em;flex:none}
-
-.cauta{position:relative;flex:1 1 auto;max-width:440px}
-.cauta__lupa{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-3);pointer-events:none}
-.cauta input{
-  width:100%;height:34px;padding:0 40px 0 32px;
-  border:1px solid var(--linie);border-radius:var(--r-ctl);background:var(--panou);
-  font-size:13.5px;transition:border-color .16s var(--e),background .16s var(--e),box-shadow .16s var(--e);
-}
-.cauta input::placeholder{color:var(--text-3)}
-.cauta input:focus{outline:none;border-color:var(--text-3);background:var(--bg);box-shadow:0 0 0 3px var(--ring)}
-.cauta kbd{
-  position:absolute;right:8px;top:50%;transform:translateY(-50%);
-  height:19px;min-width:19px;display:grid;place-items:center;padding:0 5px;
-  border:1px solid var(--linie);border-radius:5px;background:var(--bg);
-  font-family:inherit;font-size:11px;color:var(--text-3);pointer-events:none;
-  transition:opacity .16s var(--e);
-}
-.cauta input:focus~kbd,.cauta input:not(:placeholder-shown)~kbd{opacity:0}
-
-.invelis-oras{position:relative;margin-left:auto;flex:none}
-.oras{
-  flex:none;display:inline-flex;align-items:center;gap:6px;
-  height:34px;padding:0 10px;border:1px solid var(--linie);border-radius:var(--r-ctl);
-  background:var(--bg);font-size:13.5px;font-weight:500;cursor:pointer;
-  transition:border-color .16s var(--e),background .16s var(--e);
-}
-.oras:hover{background:var(--panou)}
-.oras svg{color:var(--text-3)}
-
-/* panouri (căutare + oraș) */
-.panou{
-  position:absolute;z-index:50;background:var(--bg);
-  border:1px solid var(--linie);border-radius:var(--r);box-shadow:var(--umbra);
-  padding:5px;max-height:min(62vh,440px);overflow:auto;overscroll-behavior:contain;
-}
-.panou--cauta{top:calc(100% + 6px);left:0;right:0}
-.panou--oras{top:calc(100% + 6px);right:0;width:232px}
-.panou__grup{padding:9px 9px 5px;font-size:10.5px;font-weight:550;letter-spacing:.05em;text-transform:uppercase;color:var(--text-3)}
-.panou__grup:first-child{padding-top:5px}
-.optiune{
-  display:flex;width:100%;align-items:center;gap:9px;padding:7px 9px;
-  border:0;background:none;border-radius:6px;text-align:left;cursor:pointer;font-size:13.5px;
-}
-.optiune:hover,.optiune[data-activ="da"]{background:var(--panou)}
-.optiune em{margin-left:auto;font-style:normal;font-size:12px;color:var(--text-3);font-variant-numeric:tabular-nums}
-.optiune i{
-  width:22px;height:22px;flex:none;display:grid;place-items:center;border-radius:5px;
-  background:var(--panou);color:var(--text-2);font-style:normal;font-size:11px;font-weight:550;
-}
-.optiune[data-activ="da"] i{background:var(--text);color:var(--bg)}
-.panou__nimic{padding:14px 10px;font-size:13px;color:var(--text-2)}
-
-/* ---------- capul zilei ---------- */
-.cap{padding:34px 0 4px;display:flex;align-items:flex-end;gap:16px 20px;flex-wrap:wrap}
-.cap h1{font-size:1.8rem;line-height:1.08;letter-spacing:-.03em}
-.cap p{margin:6px 0 0;font-size:13.5px;color:var(--text-2)}
-.cap__dr{margin-left:auto;display:flex;align-items:center;gap:8px}
-.filtru{
-  display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 4px 0 11px;
-  border:1px solid var(--linie);border-radius:var(--r-ctl);background:var(--panou);font-size:13px;font-weight:500;
-}
-.filtru button{
-  width:20px;height:20px;display:grid;place-items:center;border:0;border-radius:5px;
-  background:none;color:var(--text-2);cursor:pointer;
-}
-.filtru button:hover{background:var(--bg);color:var(--text)}
-
-/* ---------- calendarul ---------- */
-.calendar{
-  display:flex;gap:2px;overflow-x:auto;overscroll-behavior-x:contain;
-  margin:14px -24px 0;padding:2px 24px 20px;scrollbar-width:thin;
-}
-.calendar:empty{display:none}
-.zi-cal{
-  flex:0 0 auto;min-width:46px;padding:7px 7px 8px;border-radius:8px;
-  display:flex;flex-direction:column;align-items:center;gap:2px;
-  border:1px solid transparent;text-align:center;
-  transition:background .16s var(--e),border-color .16s var(--e);
-}
-.zi-cal__d{font-size:10.5px;color:var(--text-3);line-height:1.1}
-.zi-cal__n{font-size:15px;font-weight:550;line-height:1.15;font-variant-numeric:tabular-nums;white-space:nowrap}
-.zi-cal__c{font-size:11.5px;color:var(--text-3);line-height:1.1;font-variant-numeric:tabular-nums;min-height:13px}
-.zi-cal--we{background:color-mix(in oklab,var(--panou) 60%,transparent)}
-a.zi-cal:hover{background:var(--panou);border-color:var(--linie-2)}
-.zi-cal--gol{opacity:.32}
-.zi-cal[aria-current="date"] .zi-cal__n{text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1.5px}
-.zi-cal--ales,a.zi-cal--ales:hover{background:var(--text);border-color:var(--text)}
-.zi-cal--ales .zi-cal__d,.zi-cal--ales .zi-cal__n,.zi-cal--ales .zi-cal__c{color:var(--bg)}
-
-/* ---------- blocuri pliabile ---------- */
-.bloc{border-top:1px solid var(--linie);margin-top:34px;padding-top:22px}
-.bloc__cap{display:flex;align-items:baseline;gap:6px 14px;flex-wrap:wrap;margin-bottom:2px}
-.bloc__titlu{margin:0}
-.bloc__titlu button{
-  display:inline-flex;align-items:center;gap:8px;padding:2px 8px 2px 4px;margin-left:-4px;
-  border:0;background:none;border-radius:7px;cursor:pointer;
-  font-size:1.12rem;font-weight:600;letter-spacing:-.024em;
-  transition:background .16s var(--e);
-}
-.bloc__titlu button:hover{background:var(--panou)}
-.bloc__sageata{flex:none;color:var(--text-3);transition:transform .2s var(--e)}
-.bloc__titlu button[aria-expanded="false"] .bloc__sageata{transform:rotate(-90deg)}
-.bloc__meta{font-size:13px;color:var(--text-2)}
-.bloc__corp{padding-top:2px}
-
-/* ---------- benzi de oraș / zi ---------- */
-.benzi{padding-bottom:64px}
-.banda{
-  display:grid;grid-template-columns:128px minmax(0,1fr);gap:0 28px;
-  padding:24px 0;border-top:1px solid var(--linie-2);
-}
-.banda:first-child{border-top:0;padding-top:20px}
-.banda__et{position:sticky;top:74px;align-self:start;padding-top:1px}
-.banda__et b{display:block;font-size:13.5px;font-weight:600;letter-spacing:-.012em}
-.banda__et span{display:block;margin-top:2px;font-size:12.5px;color:var(--text-3)}
-
-.rafturi{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:24px 18px}
-
-.show{display:flex;flex-direction:column;gap:9px}
-.show__afis{
-  position:relative;aspect-ratio:1000/1414;border-radius:var(--r);overflow:hidden;
-  background:var(--panou);border:1px solid var(--linie-2);
-  transition:border-color .2s var(--e);
-}
-.show__afis img{width:100%;height:100%;object-fit:cover}
-@media (prefers-reduced-motion:no-preference){
-  .show__afis img{transition:transform .55s var(--e)}
-  .show:hover .show__afis img{transform:scale(1.022)}
-}
-.show:hover .show__afis{border-color:var(--linie)}
-.show__gol{
-  position:absolute;inset:0;display:grid;place-items:center;padding:14px;
-  text-align:center;font-size:13px;font-weight:550;color:var(--text-3);line-height:1.3;
-}
-.show__meta{display:flex;align-items:baseline;gap:6px;font-size:12.5px;color:var(--text-2);min-width:0}
-.show__ora{color:var(--text);font-weight:550;flex:none}
-.show__sala{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.show__nume{
-  font-size:14.5px;font-weight:550;line-height:1.32;letter-spacing:-.011em;
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
-}
-.show__jos{display:flex;align-items:baseline;gap:8px;font-size:12.5px;color:var(--text-2)}
-.show__rep{color:var(--text-3)}
-
-.stare{
-  position:absolute;left:8px;top:8px;height:22px;padding:0 8px;
-  display:inline-flex;align-items:center;border-radius:6px;
-  background:var(--bg);border:1px solid var(--linie);
-  font-size:11.5px;font-weight:550;color:var(--text-2);
-}
-.stare--epuizat{color:var(--semnal);border-color:color-mix(in oklab,var(--semnal) 32%,var(--linie))}
-.show--epuizat .show__afis img{filter:grayscale(.9);opacity:.66}
-.show--epuizat .show__nume,.show--epuizat .show__meta{color:var(--text-2)}
-.show--trecut{opacity:.52}
-.show--trecut .show__afis img{filter:grayscale(.6)}
-
-/* ---------- clipuri ---------- */
-.clipuri{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:24px 18px}
-.clip{display:flex;flex-direction:column;gap:9px}
-.clip__foto{
-  position:relative;aspect-ratio:9/16;border-radius:var(--r);overflow:hidden;
-  background:var(--panou);border:1px solid var(--linie-2);transition:border-color .2s var(--e);
-}
-/*
- * Toate cardurile stau pe 9:16, fiindca 8 din 11 clipuri sunt verticale. Cele incarcate pe lat
- * se taie pe margini: la Mincu, marginile sunt oricum banda neagra adaugata de el la montaj.
- */
-.clip--lat .clip__foto img{object-position:center 42%}
-.clip__foto img{width:100%;height:100%;object-fit:cover}
-@media (prefers-reduced-motion:no-preference){
-  .clip__foto img{transition:transform .55s var(--e)}
-  .clip:hover .clip__foto img{transform:scale(1.022)}
-}
-.clip:hover .clip__foto{border-color:var(--linie)}
-.clip__play{
-  position:absolute;left:8px;bottom:8px;width:24px;height:24px;
-  display:grid;place-items:center;border-radius:6px;
-  background:var(--bg);border:1px solid var(--linie);color:var(--text);
-}
-.clip__meta{display:flex;align-items:baseline;gap:6px;font-size:12.5px;color:var(--text-2);min-width:0}
-.clip__cine{color:var(--text);font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.clip__cand{flex:none}
-.clip__titlu{
-  font-size:14.5px;font-weight:550;line-height:1.32;letter-spacing:-.011em;
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
-}
-.clip__viz{font-size:12.5px;color:var(--text-2);font-variant-numeric:tabular-nums}
-
-/* ---------- stare goală ---------- */
-.gol{padding:44px 0 72px;max-width:52ch}
-.gol h2{font-size:1.25rem;letter-spacing:-.022em}
-.gol p{margin:9px 0 0;color:var(--text-2);font-size:14px}
-.gol form{display:flex;gap:8px;flex-wrap:wrap;margin-top:22px;max-width:400px}
-.gol input{
-  flex:1 1 200px;height:36px;padding:0 12px;font-size:13.5px;
-  border:1px solid var(--linie);border-radius:var(--r-ctl);background:var(--panou);
-}
-.gol input:focus{outline:none;border-color:var(--text-3);background:var(--bg);box-shadow:0 0 0 3px var(--ring)}
-.gol button{
-  height:36px;padding:0 14px;border:1px solid var(--text);border-radius:var(--r-ctl);
-  background:var(--text);color:var(--bg);font-size:13.5px;font-weight:550;cursor:pointer;
-  transition:opacity .16s var(--e);
-}
-.gol button:hover{opacity:.86}
-.gol small{display:block;margin-top:10px;font-size:12px;color:var(--text-3)}
-
-.subsol{border-top:1px solid var(--linie-2);padding:20px 0 48px;font-size:12.5px;color:var(--text-3)}
-
-@media (max-width:860px){
-  .banda{grid-template-columns:1fr;gap:14px}
-  .banda__et{position:static;display:flex;align-items:baseline;gap:8px}
-  .banda__et span{margin-top:0}
-}
-@media (max-width:680px){
-  .lat{padding:0 16px}
-  .cap h1{font-size:1.5rem}
-  .cap{padding-top:24px}
-  .calendar{margin-left:-16px;margin-right:-16px;padding-left:16px;padding-right:16px}
-  .bloc__titlu button{font-size:1.02rem}
-  .rafturi{grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:20px 14px}
-  .clipuri{grid-template-columns:repeat(2,minmax(0,1fr));gap:22px 14px}
-  .marca{font-size:14px}
-  .sus__in{gap:10px}
-  .cauta kbd{display:none}
-  .cauta{min-width:0}
-  .oras{padding:0 8px;max-width:118px}
-  .oras span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-}
-</style>
+<link rel="stylesheet" href="/stil.css">
 </head>
 <body>
 
@@ -347,6 +67,7 @@ a.zi-cal:hover{background:var(--panou);border-color:var(--linie-2)}
 
 <script src="data/events.js"></script>
 <script src="data/clipuri.js"></script>
+<script src="data/artisti.js"></script>
 <script>
 (function () {
   'use strict';
@@ -486,7 +207,13 @@ a.zi-cal:hover{background:var(--panou);border-color:var(--linie-2)}
     });
   }
 
-  function plural(n, unu, multe) { return n + ' ' + (n === 1 ? unu : multe); }
+  /* In romana, numeralul cere „de" cand ultimele doua cifre sunt 0 sau de la 20 in sus:
+   * 3 showuri, 11 showuri, 20 DE showuri, 106 clipuri, 135 DE materiale. */
+  function plural(n, unu, multe) {
+    if (n === 1) return n + ' ' + unu;
+    var ultimele = Math.abs(n) % 100;
+    return n + (ultimele === 0 || ultimele >= 20 ? ' de ' : ' ') + multe;
+  }
 
   /* Un oras merita banda proprie doar daca umple un rand. Sub pragul asta ar iesi o eticheta
    * si trei coloane goale, deci orasele subtiri se string intr-o singura banda de coada. */
@@ -1036,6 +763,8 @@ a.zi-cal:hover{background:var(--panou);border-color:var(--linie-2)}
   /* ---------- clipuri ---------- */
 
   var C = window.CLIPURI_DATA || { clipuri: [] };
+  /* Numele devine link doar cand artistul chiar are arhiva culeasa. */
+  var CU_PAGINA = window.ARTISTI_CU_PAGINA || [];
 
   function dataScurta(iso8601) {
     var d = new Date(iso8601);
@@ -1053,8 +782,9 @@ a.zi-cal:hover{background:var(--panou);border-color:var(--linie-2)}
 
   function cardClip(c) {
     var viz = vizionari(c.vizionari);
-    return '<a class="clip' + (c.vertical ? '' : ' clip--lat') + '" href="' + esc(c.url) + '" target="_blank" rel="noopener">' +
-      '<div class="clip__foto">' +
+    return '<div class="clip' + (c.vertical ? '' : ' clip--lat') + '">' +
+      '<a class="clip__foto" href="' + esc(c.url) + '" target="_blank" rel="noopener"' +
+        ' aria-label="' + esc(c.titlu) + ', pe YouTube">' +
         '<img src="' + esc(poza({ image: c.poster }, 560)) + '"' +
           ' srcset="' + esc(poza({ image: c.poster }, 560)) + ' 1x, ' + esc(poza({ image: c.poster }, 900)) + ' 2x"' +
           ' data-rezerva="' + esc(c.posterMic || c.poster) + '"' +
@@ -1063,14 +793,16 @@ a.zi-cal:hover{background:var(--panou);border-color:var(--linie-2)}
           '<svg width="9" height="10" viewBox="0 0 9 10" fill="currentColor" aria-hidden="true">' +
             '<path d="M0 0v10l9-5z"/></svg>' +
         '</span>' +
-      '</div>' +
+      '</a>' +
       '<div class="clip__meta">' +
-        '<span class="clip__cine">' + esc(c.nume) + '</span>' +
+        (c.slug && CU_PAGINA.indexOf(c.slug) !== -1
+          ? '<a class="clip__cine" href="/comedianti/' + esc(c.slug) + '">' + esc(c.nume) + '</a>'
+          : '<span class="clip__cine">' + esc(c.nume) + '</span>') +
         '<span class="clip__cand nums">' + esc(dataScurta(c.publicat)) + '</span>' +
       '</div>' +
-      '<div class="clip__titlu">' + esc(c.titlu) + '</div>' +
+      '<a class="clip__titlu" href="' + esc(c.url) + '" target="_blank" rel="noopener">' + esc(c.titlu) + '</a>' +
       (viz ? '<div class="clip__viz">' + esc(viz) + '</div>' : '') +
-    '</a>';
+    '</div>';
   }
 
   function randeazaClipuri() {
@@ -1165,6 +897,17 @@ a.zi-cal:hover{background:var(--panou);border-color:var(--linie-2)}
   ingust.addEventListener('change', placeholder);
 
   construieste();
+
+  /* Cautarea de pe pagina de artist trimite aici, cu ?cauta=. Aplic cea mai buna potrivire. */
+  var cerut = params.get('cauta');
+  if (cerut && cerut.trim()) {
+    q.value = cerut;
+    var potriviri = cauta(cerut);
+    if (potriviri.length) {
+      stare.filtru = { tip: potriviri[0].tip, cheie: potriviri[0].cheie, eticheta: potriviri[0].eticheta, ev: potriviri[0].ev };
+    }
+  }
+
   randeaza();
   reimprospateaza();
 })();

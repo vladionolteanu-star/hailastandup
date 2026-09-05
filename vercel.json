@@ -43,5 +43,11 @@
         "hostname": "i.ytimg.com"
       }
     ]
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/comedianti/:slug",
+      "destination": "/comedianti/artist.html"
+    }
+  ]
 }

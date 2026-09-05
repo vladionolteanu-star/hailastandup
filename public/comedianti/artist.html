@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comediant · hailastandup</title>
+<meta name="description" content="Toate materialele de stand-up ale comediantului și datele lui anunțate.">
+<meta name="theme-color" content="#fbfbfc" media="(prefers-color-scheme:light)">
+<meta name="theme-color" content="#1b1c1f" media="(prefers-color-scheme:dark)">
+<meta property="og:type" content="profile">
+<meta property="og:site_name" content="hailastandup">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400..600&display=swap">
+<link rel="stylesheet" href="/stil.css">
+<style>
+.artist{padding:34px 0 6px}
+.artist h1{font-size:2rem;line-height:1.06;letter-spacing:-.032em}
+.artist__meta{margin:8px 0 0;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;font-size:13.5px;color:var(--text-2)}
+.artist__meta a{color:var(--text-2);text-decoration:underline;text-underline-offset:2px;text-decoration-color:var(--linie)}
+.artist__meta a:hover{color:var(--text)}
+.punct{width:3px;height:3px;border-radius:99px;background:var(--text-3);flex:none;align-self:center}
+
+.durata{
+  position:absolute;right:8px;bottom:8px;height:20px;padding:0 6px;
+  display:inline-flex;align-items:center;border-radius:5px;
+  background:oklch(0.16 0.004 265/.86);color:oklch(0.99 0 0);
+  font-size:11.5px;font-weight:550;font-variant-numeric:tabular-nums;
+}
+.clip--mare{grid-column:span 2}
+.clip--mare .clip__foto{aspect-ratio:16/9}
+.clip--mare .clip__foto img{object-fit:cover;object-position:center}
+.clip--mare .clip__titlu{font-size:1.05rem;font-weight:600;letter-spacing:-.018em;-webkit-line-clamp:3}
+
+.mai{
+  margin-top:20px;height:34px;padding:0 14px;
+  border:1px solid var(--linie);border-radius:var(--r-ctl);background:var(--bg);
+  font-size:13.5px;font-weight:550;cursor:pointer;transition:background .16s var(--e);
+}
+.mai:hover{background:var(--panou)}
+
+@media (max-width:680px){
+  .artist h1{font-size:1.55rem}
+  .clip--mare{grid-column:span 2}
+}
+</style>
+</head>
+<body>
+
+<header class="sus">
+  <div class="lat sus__in">
+    <a class="marca" href="/">hailastandup</a>
+    <form class="cauta" id="forma-cauta" action="/" method="get">
+      <svg class="cauta__lupa" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <circle cx="7.2" cy="7.2" r="4.6" stroke="currentColor" stroke-width="1.5"/>
+        <path d="m10.8 10.8 2.7 2.7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <input id="q" name="cauta" type="text" autocomplete="off" spellcheck="false"
+             placeholder="Caută un comediant, un club, un oraș"
+             aria-label="Caută un comediant, un club sau un oraș">
+      <kbd>/</kbd>
+    </form>
+    <div class="invelis-oras">
+      <a class="oras" href="/">Toate showurile</a>
+    </div>
+  </div>
+</header>
+
+<main class="lat">
+  <div class="artist">
+    <h1 id="nume">&nbsp;</h1>
+    <p class="artist__meta" id="meta"></p>
+  </div>
+  <div id="corp"></div>
+</main>
+
+<footer class="lat subsol" id="subsol"></footer>
+
+<script src="/data/events.js"></script>
+<script src="/data/arhiva.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var $ = function (s) { return document.querySelector(s); };
+  var A = window.ARHIVA_DATA || { artisti: [] };
+  var E = window.EVENTS_DATA || { events: [] };
+
+  var ZILE = ['duminică', 'luni', 'marți', 'miercuri', 'joi', 'vineri', 'sâmbătă'];
+  var LUNI = ['ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie',
+              'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie'];
+
+  function pad(n) { return String(n).padStart(2, '0'); }
+  function iso(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function dinIso(s) { var p = String(s).slice(0, 10).split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]); }
+  var AZI = iso(new Date());
+
+  function numeZi(s) { var d = dinIso(s); return ZILE[d.getDay()] + ', ' + d.getDate() + ' ' + LUNI[d.getMonth()]; }
+  function cuMajuscula(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+  /* In romana, numeralul cere „de" cand ultimele doua cifre sunt 0 sau de la 20 in sus:
+   * 3 showuri, 11 showuri, 20 DE showuri, 106 clipuri, 135 DE materiale. */
+  function plural(n, unu, multe) {
+    if (n === 1) return n + ' ' + unu;
+    var ultimele = Math.abs(n) % 100;
+    return n + (ultimele === 0 || ultimele >= 20 ? ' de ' : ' ') + multe;
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+
+  var PE_VERCEL = location.protocol === 'https:' && !/^(localhost|127\.|\[?::1)/.test(location.hostname);
+  function original(url) {
+    var m = String(url || '').match(/\/(https?%3A%2F%2F.+)$/i);
+    return m ? decodeURIComponent(m[1]) : null;
+  }
+  function poza(sursa, w) {
+    var u = original(sursa) || sursa;
+    if (!u) return '';
+    return PE_VERCEL ? '/_vercel/image?url=' + encodeURIComponent(u) + '&w=' + w + '&q=80' : u;
+  }
+
+  function durataText(s) {
+    if (typeof s !== 'number' || !isFinite(s)) return '';
+    var o = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+    return o ? o + ':' + pad(m) + ':' + pad(sec) : m + ':' + pad(sec);
+  }
+
+  function vizionari(n) {
+    if (typeof n !== 'number' || !isFinite(n) || n < 0) return null;
+    if (n >= 1e6) return (n / 1e6).toFixed(1).replace('.', ',') + ' mil. de vizionări';
+    if (n >= 1e4) return Math.round(n / 1e3) + ' mii de vizionări';
+    return n.toLocaleString('ro-RO') + (n === 1 ? ' vizionare' : ' vizionări');
+  }
+
+  function dataScurta(s) {
+    var d = dinIso(s);
+    var text = d.getDate() + ' ' + LUNI[d.getMonth()];
+    return d.getFullYear() === new Date().getFullYear() ? text : text + ' ' + d.getFullYear();
+  }
+
+  /* ---------- cine e artistul ---------- */
+
+  var slug = new URLSearchParams(location.search).get('a') ||
+    decodeURIComponent(location.pathname.replace(/\/+$/, '').split('/').pop() || '').replace(/\.html$/, '');
+  var artist = A.artisti.find(function (a) { return a.slug === slug; });
+
+  if (!artist) {
+    $('#nume').textContent = 'Comediantul ăsta nu e încă în bază.';
+    $('#meta').innerHTML = '<a href="/">Înapoi la showuri</a>';
+    $('#subsol').textContent = '';
+    return;
+  }
+
+  document.title = artist.nume + ' · hailastandup';
+
+  /* ---------- datele lui, din evenimente ---------- */
+
+  var alias = artist.alias || [];
+  var date = E.events
+    .filter(function (e) {
+      return e.tip !== 'turneu' &&
+        (e.endDate || e.startDate) >= AZI &&
+        (e.nume || []).some(function (n) { return alias.indexOf(n) !== -1; });
+    })
+    .sort(function (a, b) {
+      return String(a.startDate).localeCompare(String(b.startDate)) ||
+             String(a.time).localeCompare(String(b.time));
+    });
+
+  /* ---------- randare ---------- */
+
+  function cardShow(e) {
+    var url = poza(e.image, 420);
+    var pret = e.pretDeLa == null ? null
+      : 'de la ' + (Number.isInteger(e.pretDeLa) ? e.pretDeLa : e.pretDeLa.toFixed(2).replace('.', ',').replace(/,00$/, '')) + ' lei';
+    return '<a class="show' + (e.soldOut ? ' show--epuizat' : '') + '" href="' + esc(e.url || '#') + '" target="_blank" rel="noopener">' +
+      '<div class="show__afis">' +
+        (url ? '<img src="' + esc(url) + '" alt="Afișul pentru ' + esc(e.titlu) + '" loading="lazy" decoding="async">' : '') +
+        (e.soldOut ? '<span class="stare stare--epuizat">Epuizat</span>' : '') +
+      '</div>' +
+      '<div class="show__meta nums">' + (e.time ? '<span class="show__ora">' + esc(e.time) + '</span>' : '') +
+        '<span class="show__sala">' + esc((e.venue || '') + (e.oras ? ', ' + e.oras : '')) + '</span></div>' +
+      '<div class="show__nume">' + esc(e.titlu) + '</div>' +
+      '<div class="show__jos nums">' + (pret ? '<span>' + esc(pret) + '</span>' : '') + '</div>' +
+    '</a>';
+  }
+
+  function cardClip(c, mare) {
+    var viz = vizionari(c.vizionari);
+    var lat = mare || c.durata >= 300;
+    var sursa = lat ? c.poster : (c.poster || c.posterMic);
+    var d = durataText(c.durata);
+    return '<a class="clip' + (lat ? ' clip--lat clip--mare' : '') + '" href="' + esc(c.url) + '" target="_blank" rel="noopener">' +
+      '<div class="clip__foto">' +
+        '<img src="' + esc(poza(sursa, lat ? 720 : 420)) + '" data-rezerva="' + esc(c.posterMic || '') + '"' +
+        ' alt="Miniatura clipului ' + esc(c.titlu) + '" loading="lazy" decoding="async">' +
+        '<span class="clip__play"><svg width="9" height="10" viewBox="0 0 9 10" fill="currentColor" aria-hidden="true"><path d="M0 0v10l9-5z"/></svg></span>' +
+        (d ? '<span class="durata nums">' + esc(d) + '</span>' : '') +
+      '</div>' +
+      '<div class="clip__meta"><span class="clip__cand nums">' + esc(dataScurta(c.publicat)) + '</span></div>' +
+      '<div class="clip__titlu">' + esc(c.titlu) + '</div>' +
+      (viz ? '<div class="clip__viz">' + esc(viz) + '</div>' : '') +
+    '</a>';
+  }
+
+  function bloc(cheie, titlu, meta, corp, deschis) {
+    return '<section class="bloc" data-sec="' + esc(cheie) + '">' +
+      '<div class="bloc__cap">' +
+        '<h2 class="bloc__titlu"><button type="button" data-bloc="' + esc(cheie) + '" aria-expanded="' + deschis + '">' +
+          '<svg class="bloc__sageata" width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true">' +
+            '<path d="M2.6 4.6 6 8l3.4-3.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>' +
+          esc(titlu) + '</button></h2>' +
+        '<span class="bloc__meta nums">' + esc(meta) + '</span>' +
+      '</div>' +
+      '<div class="bloc__corp"' + (deschis ? '' : ' hidden') + '>' + corp + '</div>' +
+    '</section>';
+  }
+
+  function banda(continut, clasa) {
+    return '<section class="banda"><div class="banda__et"></div><div class="' + clasa + '">' + continut + '</div></section>';
+  }
+
+  var RAFTURI = [
+    { fel: 'special', titlu: 'Specialuri', unu: 'special', multe: 'specialuri', pas: 6 },
+    { fel: 'moment', titlu: 'Momente și seturi', unu: 'moment', multe: 'momente', pas: 8 },
+    { fel: 'clip', titlu: 'Clipuri scurte', unu: 'clip', multe: 'clipuri', pas: 12 }
+  ];
+
+  /* Cate sunt aratate acum din fiecare raft. Restul vin la apasare, ca sa nu incarcam 135 deodata. */
+  var aratate = {};
+
+  function randeaza() {
+    var html = '';
+
+    if (date.length) {
+      html += bloc('date', 'Date anunțate',
+        plural(date.length, 'dată', 'date') + ', în ' +
+          plural(new Set(date.map(function (e) { return e.oras || e.city; })).size, 'oraș', 'orașe'),
+        banda(date.map(cardShow).join(''), 'rafturi'), true);
+    }
+
+    RAFTURI.forEach(function (r) {
+      var lista = artist.clipuri.filter(function (c) { return c.fel === r.fel; });
+      if (!lista.length) return;
+      if (aratate[r.fel] == null) aratate[r.fel] = r.pas;
+      var vizibile = lista.slice(0, aratate[r.fel]);
+      var rest = lista.length - vizibile.length;
+
+      var corp = banda(vizibile.map(function (c) { return cardClip(c, r.fel === 'special'); }).join(''), 'clipuri') +
+        (rest > 0
+          ? '<section class="banda"><div class="banda__et"></div><div><button class="mai" type="button" data-mai="' + r.fel + '">' +
+            'Încă ' + Math.min(rest, r.pas) + ' din ' + rest + '</button></div></section>'
+          : '');
+
+      html += bloc(r.fel, r.titlu, plural(lista.length, r.unu, r.multe), corp, true);
+    });
+
+    $('#corp').innerHTML = html;
+
+    Array.prototype.forEach.call($('#corp').querySelectorAll('[data-bloc]'), function (btn) {
+      btn.addEventListener('click', function () {
+        var d = btn.getAttribute('aria-expanded') !== 'true';
+        btn.setAttribute('aria-expanded', String(d));
+        btn.closest('.bloc').querySelector('.bloc__corp').hidden = !d;
+      });
+    });
+    Array.prototype.forEach.call($('#corp').querySelectorAll('[data-mai]'), function (btn) {
+      btn.addEventListener('click', function () {
+        var fel = btn.getAttribute('data-mai');
+        var r = RAFTURI.find(function (x) { return x.fel === fel; });
+        aratate[fel] += r.pas;
+        randeaza();
+        var sec = $('#corp').querySelector('[data-sec="' + fel + '"]');
+        if (sec) sec.scrollIntoView({ block: 'nearest' });
+      });
+    });
+  }
+
+  /* ---------- cap si subsol ---------- */
+
+  $('#nume').textContent = artist.nume;
+
+  var bucati = [plural(artist.count, 'material de stand-up', 'materiale de stand-up')];
+  if (date.length) bucati.push(plural(date.length, 'dată anunțată', 'date anunțate'));
+  $('#meta').innerHTML = bucati.map(esc).join('<span class="punct"></span>') +
+    '<span class="punct"></span><a href="https://www.youtube.com/' + esc(artist.handle) +
+    '" target="_blank" rel="noopener">' + esc(artist.handle) + '</a>';
+
+  var cules = new Date(A.culesLa);
+  $('#subsol').textContent =
+    'Materialele vin de pe canalul lui de YouTube, datele de pe iaBilet. ' +
+    'Ultima verificare: ' + numeZi(iso(cules)) + ', ora ' + pad(cules.getHours()) + ':' + pad(cules.getMinutes()) + '. ' +
+    'Din ' + artist.incarcate + ' de clipuri pe canal, ' + artist.count + ' sunt stand-up.';
+
+  document.addEventListener('error', function (e) {
+    var img = e.target;
+    if (!img || img.tagName !== 'IMG') return;
+    var r = img.getAttribute('data-rezerva');
+    if (r) { img.removeAttribute('data-rezerva'); img.removeAttribute('srcset'); img.src = r; }
+  }, true);
+
+  document.addEventListener('keydown', function (e) {
+    var el = document.activeElement;
+    if (e.key === '/' && el !== $('#q') && !/^(INPUT|TEXTAREA)$/.test(el ? el.tagName : '')) {
+      e.preventDefault(); $('#q').focus();
+    }
+  });
+
+  randeaza();
+})();
+</script>
+</body>
+</html>
