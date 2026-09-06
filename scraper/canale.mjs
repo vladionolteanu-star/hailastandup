@@ -7,9 +7,14 @@
 // `alias` sunt nume EXACTE, cum le scoate `nume.mjs` din titlurile de pe iaBilet. Fără potriviri
 // parțiale: „Toma" e micul Toma, dar „Adelina Toma" e altcineva, iar „Teo" nu e „Teo Ioniță".
 //
-// `politica` spune cum se filtrează feedul RSS de pe prima pagină:
-//   'standup' — canal de stand-up. Intră tot, mai puțin ce se declară altceva (podcast, vlog).
-//   'mixt'    — canal care postează și altceva. Intră doar ce se declară stand-up în titlu.
+// Nu există „canal doar de stand-up". Toate cele nouă rulează și altceva pe același canal:
+// „Colegi de cameră" la Bordea, „Popesco Show" la Popesco, „CineȘtieCe" la Teo, „M am convins"
+// la Vio. Ce intră și ce nu decide `fel.mjs`, după titlu, la fel pentru toată lumea.
+//
+// `scurteFaraMarcaj: true` = pe canalul ăsta un short fără nicio etichetă e tot o bucată de
+// stand-up, verificat pe ce au postat ultima oară: „AM PLÂNS 200 KM #bordea", „RECONFIGURARE
+// COPIL #costel". Contează doar pentru feedul RSS de pe prima pagină, care n-are durată. Pe
+// canalul lui micul Toma e fals — acolo ce n-are etichetă e animație sau sketch.
 //
 // `activ: false` = canal cules mai devreme, ținut aici ca să nu se piardă munca de verificare.
 
@@ -21,7 +26,6 @@ export const CANALE = [
     handle: '@miculToma',
     id: 'UCySFpz4yYjG87ZM9rwxgLLw',
     alias: ['Toma'],
-    politica: 'mixt',
     activ: true,
   },
   {
@@ -31,7 +35,7 @@ export const CANALE = [
     handle: '@ConstantinBojog',
     id: 'UCNPn3cj8Lu1F6_a-zjhYVIg',
     alias: ['Costel', 'Costel - Edi Rădoiu'],
-    politica: 'standup',
+    scurteFaraMarcaj: true,
     activ: true,
   },
   {
@@ -41,7 +45,6 @@ export const CANALE = [
     handle: '@MicutzuStandupOfficial',
     id: 'UCAaqUlKbywt__K4jvlrRdbA',
     alias: ['Micutzu'],
-    politica: 'standup',
     activ: true,
   },
   {
@@ -51,7 +54,6 @@ export const CANALE = [
     handle: '@mincustandup',
     id: 'UCZI_wTC68u1aMx474Os1N7w',
     alias: ['Mincu'],
-    politica: 'standup',
     activ: true,
   },
   {
@@ -61,7 +63,6 @@ export const CANALE = [
     handle: '@sorin.parcalab',
     id: 'UC4tGe5E0imDIGlluh8hKpdQ',
     alias: ['Sorin Pârcălab', 'Sorin Pârcălab - Banciu'],
-    politica: 'standup',
     activ: true,
   },
   {
@@ -71,7 +72,6 @@ export const CANALE = [
     handle: '@CristiPopesco',
     id: 'UCm5WJQkeuQKAY2fboncNU0Q',
     alias: ['Cristi Popesco'],
-    politica: 'standup',
     activ: true,
   },
   {
@@ -81,7 +81,6 @@ export const CANALE = [
     handle: '@TeoStandUpComedyOfficial',
     id: 'UCRVErQvx7U8AmvINWa1JuNw',
     alias: ['Teo'],
-    politica: 'standup',
     activ: true,
   },
   {
@@ -91,7 +90,6 @@ export const CANALE = [
     handle: '@viodragu',
     id: 'UCL409k_nxTgwqWUxubHDREQ',
     alias: ['Vio'],
-    politica: 'standup',
     activ: true,
   },
   {
@@ -101,7 +99,7 @@ export const CANALE = [
     handle: '@bordeacatalin',
     id: 'UCwO2NgrXCTE0Y4_KxCCVyoQ',
     alias: ['Bordea'],
-    politica: 'standup',
+    scurteFaraMarcaj: true,
     activ: true,
   },
 
@@ -113,7 +111,6 @@ export const CANALE = [
     handle: '@DABRAVO',
     id: 'UCF0WTIjRThqdekNZxPFSS6A',
     alias: ['Mihai Bobonete'],
-    politica: 'mixt',
     activ: false,
   },
   {
@@ -123,7 +120,6 @@ export const CANALE = [
     handle: '@alexdobrota',
     id: 'UC_QeKm2oXFiV0_KKUMv9QvQ',
     alias: ['Alex Dobrotă', 'Dobrotă'],
-    politica: 'mixt',
     activ: false,
   },
   {
@@ -133,7 +129,6 @@ export const CANALE = [
     handle: '@NisteOameni',
     id: 'UCoTakuJ2QH2C8Wt13MaVuoA',
     alias: [],
-    politica: 'mixt',
     activ: false,
   },
   {
@@ -143,7 +138,6 @@ export const CANALE = [
     handle: '@thefoolclub',
     id: 'UCrZN9miwsbplTES9tW2AVrw',
     alias: [],
-    politica: 'mixt',
     activ: false,
   },
 ];

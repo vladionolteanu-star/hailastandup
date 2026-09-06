@@ -77,13 +77,11 @@
 <footer class="lat subsol" id="subsol"></footer>
 
 <script src="/data/events.js"></script>
-<script src="/data/arhiva.js"></script>
 <script>
 (function () {
   'use strict';
 
   var $ = function (s) { return document.querySelector(s); };
-  var A = window.ARHIVA_DATA || { artisti: [] };
   var E = window.EVENTS_DATA || { events: [] };
 
   var ZILE = ['duminică', 'luni', 'marți', 'miercuri', 'joi', 'vineri', 'sâmbătă'];
@@ -145,8 +143,26 @@
 
   var slug = new URLSearchParams(location.search).get('a') ||
     decodeURIComponent(location.pathname.replace(/\/+$/, '').split('/').pop() || '').replace(/\.html$/, '');
-  var artist = A.artisti.find(function (a) { return a.slug === slug; });
+  var artist = null;
 
+  /* Arhiva sta in cate un fisier pe artist, incarcat dupa ce stim cine e: toti la un loc fac
+   * 1 MB, iar pagina asta ar folosi a noua parte din el. Slugul vine din rescrierea
+   * /comedianti/:slug, deci nu se stie cand se scrie eticheta de script in pagina. */
+  function cuArhiva(gata) {
+    if (!slug) return gata();
+    var s = document.createElement('script');
+    s.src = '/data/arhiva/' + encodeURIComponent(slug) + '.js';
+    s.onload = s.onerror = function () { gata(); };
+    document.head.appendChild(s);
+  }
+
+  cuArhiva(function () {
+    var a = window.ARHIVA_ARTIST;
+    artist = a && a.slug === slug ? a : null;
+    porneste();
+  });
+
+  function porneste() {
   if (!artist) {
     $('#nume').textContent = 'Comediantul ăsta nu e încă în bază.';
     $('#meta').innerHTML = '<a href="/">Înapoi la showuri</a>';
@@ -243,7 +259,10 @@
     }
 
     RAFTURI.forEach(function (r) {
-      var lista = artist.clipuri.filter(function (c) { return c.fel === r.fel; });
+      /* Cel mai vizionat primul. Un om care ajunge aici prima oara trebuie sa dea peste ce a
+       * rupt de pe canal, nu peste ce s-a postat ieri; ordinea cronologica e pe prima pagina. */
+      var lista = artist.clipuri.filter(function (c) { return c.fel === r.fel; })
+        .sort(function (x, y) { return (y.vizionari || 0) - (x.vizionari || 0); });
       if (!lista.length) return;
       if (aratate[r.fel] == null) aratate[r.fel] = r.pas;
       var vizibile = lista.slice(0, aratate[r.fel]);
@@ -289,11 +308,11 @@
     '<span class="punct"></span><a href="https://www.youtube.com/' + esc(artist.handle) +
     '" target="_blank" rel="noopener">' + esc(artist.handle) + '</a>';
 
-  var cules = new Date(A.culesLa);
+  var cules = new Date(artist.culesLa);
   $('#subsol').textContent =
     'Materialele vin de pe canalul lui de YouTube, datele de pe iaBilet. ' +
     'Ultima verificare: ' + numeZi(iso(cules)) + ', ora ' + pad(cules.getHours()) + ':' + pad(cules.getMinutes()) + '. ' +
-    'Din ' + artist.incarcate + ' de clipuri pe canal, ' + artist.count + ' sunt stand-up.';
+    'Din ' + plural(artist.incarcate, 'clip', 'clipuri') + ' pe canal, ' + artist.count + ' sunt stand-up.';
 
   document.addEventListener('error', function (e) {
     var img = e.target;
@@ -310,6 +329,7 @@
   });
 
   randeaza();
+  }
 })();
 </script>
 </body>

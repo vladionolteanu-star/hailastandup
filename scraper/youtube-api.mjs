@@ -10,7 +10,8 @@
 //
 // Cheia se ia din YOUTUBE_API_KEY si nu se scrie niciodata in cod sau in date.
 
-import { esteStandup, felul } from './fel.mjs';
+import { filtreazaArhiva } from './fel.mjs';
+import { curataTitluClip } from './youtube.mjs';
 
 const API = 'https://www.googleapis.com/youtube/v3';
 
@@ -88,7 +89,6 @@ export async function detalii(iduri) {
         titlu: (v.snippet?.title ?? '').trim(),
         publicat: v.snippet?.publishedAt ?? null,
         durata: secunde,
-        fel: felul(secunde),
         vizionari: v.statistics?.viewCount == null ? null : Number(v.statistics.viewCount),
         url: `https://www.youtube.com/watch?v=${v.id}`,
         poster: `https://i.ytimg.com/vi/${v.id}/maxresdefault.jpg`,
@@ -104,11 +104,15 @@ export async function arhivaCanalului(canal, { max = 5000 } = {}) {
   const iduri = await idurileCanalului(canal.id, { max });
   const tot = await detalii(iduri);
 
-  // Se pastreaza doar stand-up-ul. Restul canalului (livestreamuri, animatii, vlog) ramane
-  // pe YouTube: aici e un site de stand-up, nu o oglinda a canalului.
-  const clipuri = tot
-    .filter((v) => esteStandup(v.titlu, canal.politica))
-    .map((v) => ({ ...v, slug: canal.slug, nume: canal.nume }))
+  // Se pastreaza doar stand-up-ul. Restul canalului (podcast, livestreamuri, sketch, gaming)
+  // ramane pe YouTube: aici e un site de stand-up, nu o oglinda a canalului. Filtrarea cere
+  // tot canalul deodata, fiindca seriile se recunosc numai comparand titlurile intre ele.
+  // `fel` vine din filtrare, nu se recalculeaza aici: acolo se stie daca titlul face parte
+  // dintr-o serie, iar fara asta „STAND-UP IN AVION! | La Nea Reelu'" trece drept special.
+  const clipuri = filtreazaArhiva(canal, tot)
+    // Titlul se curata DUPA filtrare: pentru filtru hashtagurile sunt semnal („#standup"),
+    // pe card sunt zgomot — „Standup - Banii de masina #standup #comedy" ocupa doua randuri.
+    .map((v) => ({ ...v, titlu: curataTitluClip(v.titlu), slug: canal.slug, nume: canal.nume }))
     .sort((a, b) => String(b.publicat).localeCompare(String(a.publicat)));
 
   return { ...canal, incarcate: tot.length, count: clipuri.length, clipuri };

@@ -1,16 +1,18 @@
-// CLI: culege arhiva completa a canalelor active si scrie public/data/arhiva.js.
+// CLI: culege arhiva completa a canalelor active si scrie cate un fisier pe artist in
+// public/data/arhiva/. Un singur fisier pentru toti ajunsese la 1 MB pe noua canale, iar
+// pagina fiecarui artist il incarca intreg ca sa foloseasca a noua parte din el.
 //
 //   node scraper/arhiva.mjs                 toate canalele active
 //   node scraper/arhiva.mjs micul-toma      doar un canal, dupa slug
 
-import { writeFile, mkdir, readFile } from 'node:fs/promises';
+import { writeFile, mkdir, readFile, readdir } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CANALE_ACTIVE, dupaSlug } from './canale.mjs';
 import { arhivaCanalului } from './youtube-api.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const OUT = resolve(ROOT, 'public/data/arhiva.js');
+const OUT = resolve(ROOT, 'public/data/arhiva');
 
 // Cheia sta in .env.local, care e in .gitignore. Fara dependinte pentru asa ceva.
 try {
@@ -49,20 +51,26 @@ if (!artisti.length || !artisti.some((a) => a.count)) {
   process.exit(1);
 }
 
-const payload = {
-  source: 'YouTube Data API v3',
-  culesLa: new Date().toISOString(),
-  canale: artisti.length,
-  count: artisti.reduce((n, a) => n + a.count, 0),
-  artisti: artisti.map(({ clipuri, ...rest }) => ({ ...rest, clipuri })),
-};
+const cand = new Date().toISOString();
 
-await mkdir(dirname(OUT), { recursive: true });
-await writeFile(OUT, `window.ARHIVA_DATA = ${JSON.stringify(payload)};\n`, 'utf8');
+// Cate un fisier pe artist: pagina lui incarca doar ce arata. Toti la un loc fac 1 MB.
+await mkdir(OUT, { recursive: true });
+for (const a of artisti) {
+  if (!a.count) continue;
+  const unul = { source: 'YouTube Data API v3', culesLa: cand, ...a };
+  await writeFile(resolve(OUT, `${a.slug}.js`), `window.ARHIVA_ARTIST = ${JSON.stringify(unul)};
+`, 'utf8');
+}
 
-// Lista scurta a celor care chiar au pagina. Prima pagina o incarca in locul arhivei intregi,
-// ca sa nu trimita omul catre o pagina goala.
+// Lista celor care chiar au pagina, citita de pe disc si nu din ce s-a cules acum: altfel un
+// `node scraper/arhiva.mjs micul-toma` ar sterge din lista ceilalti opt artisti, care au fisier.
 const CU_PAGINA = resolve(ROOT, 'public/data/artisti.js');
-const listaSlug = JSON.stringify(artisti.filter((a) => a.count).map((a) => a.slug));
-await writeFile(CU_PAGINA, 'window.ARTISTI_CU_PAGINA = ' + listaSlug + ';' + String.fromCharCode(10), 'utf8');
-console.log(`\nscris ${OUT}\n${payload.count} clipuri, ${payload.canale} canale`);
+const peDisc = (await readdir(OUT)).filter((f) => f.endsWith('.js')).map((f) => f.slice(0, -3)).sort();
+await writeFile(CU_PAGINA, `window.ARTISTI_CU_PAGINA = ${JSON.stringify(peDisc)};
+`, 'utf8');
+
+const total = artisti.reduce((n, a) => n + a.count, 0);
+console.log(`
+scris ${OUT}
+${total} materiale, ${artisti.filter((a) => a.count).length} canale`);
+console.log(`${peDisc.length} artisti cu pagina: ${peDisc.join(', ')}`);

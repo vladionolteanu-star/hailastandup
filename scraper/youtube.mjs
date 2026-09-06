@@ -2,6 +2,7 @@
 // Feedul da ultimele 15 clipuri ale unui canal, cu titlu, data si numarul de vizualizari.
 
 import { CANALE_ACTIVE } from './canale.mjs';
+import { esteStandup } from './fel.mjs';
 
 const FEED = 'https://www.youtube.com/feeds/videos.xml?channel_id=';
 const UA =
@@ -42,21 +43,6 @@ export function curataTitluClip(titlu) {
     .replace(/\s+/g, ' ')
     .trim();
   return t.length >= 3 ? t : String(titlu ?? '').trim();
-}
-
-const STANDUP = /stand[\s-]?up|comedy\s+special|\broast\b/i;
-const ALTCEVA = /\bpodcast\b|momente\s+din|\bepisod(?:ul)?\b|\bvlog\b|\btrailer\b|\bteaser\b|\breact(?:ie|ion)\b/i;
-
-/**
- * Pe canalele de stand-up intra tot, mai putin ce se declara altceva. Pe canalele mixte,
- * invers: intra doar ce se declara stand-up. Excluderea se uita pe titlul fara hashtaguri,
- * fiindca multi pun `#podcast` ca eticheta pe clipuri care n-au nicio legatura cu un podcast.
- */
-export function esteStandup(titlu, politica) {
-  const brut = String(titlu ?? '');
-  const faraTaguri = brut.replace(/#[^\s#]+/gu, ' ');
-  if (ALTCEVA.test(faraTaguri)) return false;
-  return politica === 'standup' ? true : STANDUP.test(brut);
 }
 
 export function parseFeed(xml) {
@@ -104,7 +90,7 @@ export async function adunaClipuri({ peCanal = 2, zile = 120 } = {}) {
     CANALE_ACTIVE.map(async (c) => {
       try {
         const clipuri = parseFeed(await get(FEED + c.id))
-          .filter((v) => esteStandup(v.titlu, c.politica) && v.publicat >= prag)
+          .filter((v) => esteStandup(v.titlu, c) && v.publicat >= prag)
           .sort((a, b) => b.publicat.localeCompare(a.publicat))
           .slice(0, peCanal)
           .map((v) => ({

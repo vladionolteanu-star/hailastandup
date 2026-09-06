@@ -16,11 +16,12 @@ Strategia și deciziile blocate sunt în `PRODUCT.md`, în rădăcina proiectulu
 | `scraper/titlu.mjs` | Curăță titlul de oraș, sală, categorie și sufixul de repriză. |
 | `scraper/nume.mjs` | Extrage numele comedianților din titlul unui eveniment. |
 | `scraper/snapshot.mjs` | Reface `public/data/events.js`. |
-| `scraper/canale.mjs` | Comedianții urmăriți: canal, handle, alias-uri, politică de filtrare. |
+| `scraper/canale.mjs` | Comedianții urmăriți: canal, handle, alias-uri. |
+| `scraper/fel.mjs` | Ce e stand-up și ce fel de material e. Folosit și de RSS, și de arhivă. |
 | `scraper/youtube.mjs` | Feedurile RSS de canal, pentru „Ce a apărut nou" de pe prima pagină. |
 | `scraper/clipuri.mjs` | Reface `public/data/clipuri.js`. |
 | `scraper/youtube-api.mjs` | Arhiva completă a unui canal, prin YouTube Data API v3. |
-| `scraper/arhiva.mjs` | Reface `public/data/arhiva.js`. Cere `YOUTUBE_API_KEY`. |
+| `scraper/arhiva.mjs` | Reface `public/data/arhiva/<slug>.js` și `artisti.js`. Cere `YOUTUBE_API_KEY`. |
 | `api/events.js` | Scrapează live listingul de pe iaBilet. |
 | `api/event.js` | Ora și tarifele unui spectacol. |
 | `api/clipuri.js` | Citește live feedurile de YouTube. |
@@ -66,17 +67,22 @@ arhiva lui stă pe pagina artistului. Canalele stau în `scraper/canale.mjs`, fi
 clip real**, nu dintr-un handle scris din memorie: se deschide pagina clipului și se citește
 `channelId` din ea.
 
-Filtrarea contează, nu e decor. Pe `DA BRAVO!` un singur clip din ultimele 15 e stand-up,
-restul sunt momente din podcast; pe `micul Toma` sunt animații, sketch-uri și vlog. De aceea
-fiecare canal are o politică:
+Filtrarea contează, nu e decor, și **nu există „canal doar de stand-up"**. Toate cele nouă
+rulează și altceva pe același canal: „Colegi de cameră" la Bordea, „Popesco Show" la Popesco,
+„CineȘtieCe" la Teo, „M am convins" la Vio, animații și sketch-uri la micul Toma. O politică
+pe canal, cu „pe cele de stand-up intră tot", trecea 111 episoade de podcast drept
+specialurile lui Bordea. Regula e acum una singură, în `scraper/fel.mjs`, aceeași pentru toți.
 
-| politică | ce intră |
-|---|---|
-| `standup` | tot, mai puțin ce se declară altceva (podcast, vlog, trailer) |
-| `mixt` | doar ce se declară stand-up în titlu |
+Feedul RSS n-are durată și dă 15 clipuri pe canal, deci acolo se cere **marcaj explicit de
+stand-up în titlu**: un episod de podcast strecurat sub „Ce a apărut nou" costă mai mult decât
+un clip bun lipsă. Excepția e `scurteFaraMarcaj` în `canale.mjs` — pe canalele unde s-a
+verificat că shortul fără nicio etichetă e tot o bucată de stand-up („AM PLÂNS 200 KM
+#bordea", „RECONFIGURARE COPIL #costel"). Pe micul Toma ar fi fals: acolo ce n-are etichetă e
+animație sau sketch.
 
 Excluderea se uită pe titlul **fără hashtaguri**, fiindcă mulți pun `#podcast` ca etichetă pe
-clipuri care n-au nicio legătură cu un podcast.
+clipuri care n-au nicio legătură cu un podcast. Marcajul, invers, se uită pe titlul întreg:
+`#standup` la coadă e semnal.
 
 Miniaturile: `oardefault.jpg` există doar pentru clipurile verticale și dă 404 pentru cele
 16:9, deci e semnalul de orientare. Fără el, `maxresdefault` al unui Short vine cu bare negre
@@ -94,9 +100,45 @@ npm run arhiva                # toate canalele active
 node scraper/arhiva.mjs micul-toma   # doar unul
 ```
 
-Cheia se pune în `site/.env.local` (`YOUTUBE_API_KEY=...`, fișierul e în `.gitignore`) și în
-Environment Variables pe Vercel. Costul: lista de încărcări e 1 unitate la 50 de clipuri,
-detaliile la fel, deci toată arhiva costă ~150 din cele 10.000 de unități pe zi.
+Iese **câte un fișier pe artist**, `public/data/arhiva/<slug>.js`, plus `artisti.js` cu lista
+celor care au pagină. Un singur fișier pentru toți ajunsese la 1 MB, iar pagina fiecărui
+artist îl încărca întreg ca să folosească a noua parte din el. Lista din `artisti.js` se
+citește de pe disc, nu din ce s-a cules acum: altfel un `node scraper/arhiva.mjs micul-toma`
+ar șterge din listă ceilalți opt artiști, care au fișier.
+
+Cheia se pune în `site/.env.local` (`YOUTUBE_API_KEY=...`, fișierul e în `.gitignore`).
+**Pe Vercel nu e nevoie de ea**: culesul se face local și `public/data/arhiva/` intră în
+repo. Costul: lista de încărcări e 1 unitate la 50 de clipuri, detaliile la fel, deci toată
+arhiva costă ~150 din cele 10.000 de unități pe zi.
+
+#### Ce e un special
+
+Durata singură nu ajunge: pe canalul lui micul Toma cele mai lungi clipuri sunt livestreamuri
+de două ore. Marcajul din **titlu** spune ce e stand-up, durata spune ce fel. Peste asta, două
+reguli câștigate pe date:
+
+- **Un număr de episod bate orice marcaj.** „StandUp cu Bieber | USP S5E01" e episodul 1 din
+  sezonul 5 al emisiunii lui Bordea, nu un special de 45 de minute.
+- **Un nume care se repetă pe canal e emisiune**, dar seriile se numără **doar pe titlurile
+  fără marcaj**. Altfel numele unui special, repetat pe extrasele lui, trece drept serie și
+  scoate exact ce e mai bun: „Zâmbete și Empatie" al lui Micutzu, 5,8 milioane de vizionări.
+
+Ies 26 de specialuri pe cele nouă canale, din 2.410 materiale păstrate.
+
+### Pagina de artist
+
+`public/comedianti/artist.html`, servită la `/comedianti/:slug` printr-o rescriere din
+`vercel.json`. Slugul nu se știe când se scrie pagina, deci arhiva lui se încarcă abia după ce
+îl citim din URL — de aici fișierul pe artist, nu unul pentru toți.
+
+Rafturile — Date anunțate, Specialuri, Momente și seturi, Clipuri scurte — apar doar când au
+ce arăta: Vio n-are niciun special, deci pe pagina lui nu există raft de specialuri. În
+rafturi, **cel mai vizionat primul**, nu cel mai nou: cine ajunge aici prima oară trebuie să
+dea peste ce a rupt de pe canal, nu peste ce s-a postat ieri. Ordinea cronologică e treaba
+primei pagini.
+
+Toate cele nouă canale active au pagină. O pagină numai cu clipuri scurte e în regulă — 165 de
+shorturi ale lui Vio, cel mai vizionat primul, e exact ce caută omul care a nimerit aici.
 
 ### Calendarul
 
@@ -142,7 +184,7 @@ verificabilă, câmpul nu apare.
 npm run dev               # servește public/ pe :3000
 npm run snapshot          # reface snapshotul de evenimente
 npm run clipuri           # reface snapshotul de clipuri recente
-npm run arhiva            # reface arhiva completa (cere YOUTUBE_API_KEY)
+npm run arhiva            # reface arhiva pe artist (cere YOUTUBE_API_KEY, doar local)
 ```
 
 ## Parser de nume
