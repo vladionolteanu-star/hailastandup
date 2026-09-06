@@ -64,7 +64,7 @@ export function parseFeed(xml) {
  * Pentru un clip normal da 404. E singurul semnal ieftin si sigur: RSS-ul nu spune nimic
  * despre orientare, iar `maxresdefault` al unui vertical vine cu bare negre pe laturi.
  */
-async function esteVertical(id) {
+export async function esteVertical(id) {
   try {
     const r = await fetch(`https://i.ytimg.com/vi/${id}/oardefault.jpg`, {
       method: 'HEAD',

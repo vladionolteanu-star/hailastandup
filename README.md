@@ -18,18 +18,17 @@ Strategia și deciziile blocate sunt în `PRODUCT.md`, în rădăcina proiectulu
 | `scraper/snapshot.mjs` | Reface `public/data/events.js`. |
 | `scraper/canale.mjs` | Comedianții urmăriți: canal, handle, alias-uri. |
 | `scraper/fel.mjs` | Ce e stand-up și ce fel de material e. Folosit și de RSS, și de arhivă. |
-| `scraper/youtube.mjs` | Feedurile RSS de canal, pentru „Ce a apărut nou" de pe prima pagină. |
-| `scraper/clipuri.mjs` | Reface `public/data/clipuri.js`. |
+| `scraper/youtube.mjs` | Cititor de feeduri RSS de canal. Nu mai alimentează pagina, vezi mai jos. |
+| `scraper/clipuri.mjs` | Reface `public/data/clipuri.js` din arhivă, pentru banda de pe prima pagină. |
 | `scraper/youtube-api.mjs` | Arhiva completă a unui canal, prin YouTube Data API v3. |
 | `scraper/arhiva.mjs` | Reface `public/data/arhiva/<slug>.js` și `artisti.js`. Cere `YOUTUBE_API_KEY`. |
 | `api/events.js` | Scrapează live listingul de pe iaBilet. |
 | `api/event.js` | Ora și tarifele unui spectacol. |
-| `api/clipuri.js` | Citește live feedurile de YouTube. |
 
 ## Ce e pe pagină acum
 
 Headerul (marcă, căutare, oraș), banda de calendar, ziua curentă, blocurile care urmează și
-„Ce a apărut nou". Restul secțiunilor se adaugă una câte una, pe date reale.
+„Ce merită văzut". Restul secțiunilor se adaugă una câte una, pe date reale.
 
 `?zi=AAAA-LL-ZZ` deschide altă zi. Folosit ca să vezi stările: zi plină, o singură
 reprezentație, zi goală.
@@ -57,15 +56,27 @@ primește mereu. Sub prag, orașele intră într-o bandă de coadă, cu orașul 
 card. Fără regula asta, o zi cu 11 showuri în 5 orașe scotea patru rânduri cu un singur
 card. Blocurile de weekend se grupează pe zi, nu pe oraș.
 
-### Ce a apărut nou
+### Ce merită văzut
 
-Cele mai recente două clipuri de stand-up de la fiecare canal urmărit, **din ultimele 120 de
-zile**, puse cap la cap și sortate după dată. Fereastra contează: cu nouă canale și „ultimele
-două de la fiecare", fără ea ar ajunge sub un titlu care spune „nou" și clipuri de acum șase
-luni, de la artiști care pur și simplu n-au mai postat. Cine n-a postat recent nu apare aici;
-arhiva lui stă pe pagina artistului. Canalele stau în `scraper/canale.mjs`, fiecare cu **ID-ul rezolvat dintr-un
-clip real**, nu dintr-un handle scris din memorie: se deschide pagina clipului și se citește
-`channelId` din ea.
+**Recența e criteriu de intrare, vizionările sunt criteriu de ordonare.** Intră clipurile de
+sub 5 minute din ultimele 120 de zile, de pe toate canalele, ordonate după vizionări, maximum
+două de artist, primele 12.
+
+Regula veche era „ultimele două de la fiecare canal, sortate după dată". Aia e echitate între
+artiști, nu calitate: cine posta ieri un clip slab ajungea pe primul rând. Se vedea în cifre —
+secțiunea amesteca 1.218 vizionări cu 398.414. Plafonul de două pe artist a rămas, dar e
+plafon, nu cotă: cine n-are material bun în fereastră pur și simplu nu intră.
+
+Sursa e **arhiva de pe disc**, nu feedurile RSS. RSS-ul dă 15 încărcări pe canal, plafon fix,
+și pe canalele active fereastra de 120 de zile nici nu încape în el: cu RSS, secțiunea arăta
+un clip cu 1.218 vizionări în timp ce în aceeași fereastră stătea unul cu 1,7 milioane, pe
+care RSS-ul pur și simplu nu-l putea vedea. Bazinul din arhivă e de 154 de clipuri. De aceea
+nu mai există `/api/clipuri`: un endpoint live care citește RSS ar servi un clasament mai
+prost decât cel din snapshot. `adunaClipuri` din `scraper/youtube.mjs` rămâne, nelegat de
+pagină, ca să nu se piardă cititorul de feeduri.
+
+Canalele stau în `scraper/canale.mjs`, fiecare cu **ID-ul rezolvat dintr-un clip real**, nu
+dintr-un handle scris din memorie: se deschide pagina clipului și se citește `channelId` din ea.
 
 Filtrarea contează, nu e decor, și **nu există „canal doar de stand-up"**. Toate cele nouă
 rulează și altceva pe același canal: „Colegi de cameră" la Bordea, „Popesco Show" la Popesco,
@@ -74,7 +85,7 @@ pe canal, cu „pe cele de stand-up intră tot", trecea 111 episoade de podcast 
 specialurile lui Bordea. Regula e acum una singură, în `scraper/fel.mjs`, aceeași pentru toți.
 
 Feedul RSS n-are durată și dă 15 clipuri pe canal, deci acolo se cere **marcaj explicit de
-stand-up în titlu**: un episod de podcast strecurat sub „Ce a apărut nou" costă mai mult decât
+stand-up în titlu**: un episod de podcast strecurat sub „Ce merită văzut" costă mai mult decât
 un clip bun lipsă. Excepția e `scurteFaraMarcaj` în `canale.mjs` — pe canalele unde s-a
 verificat că shortul fără nicio etichetă e tot o bucată de stand-up („AM PLÂNS 200 KM
 #bordea", „RECONFIGURARE COPIL #costel"). Pe micul Toma ar fi fals: acolo ce n-are etichetă e

@@ -7,9 +7,6 @@
     },
     "api/event.js": {
       "maxDuration": 20
-    },
-    "api/clipuri.js": {
-      "maxDuration": 30
     }
   },
   "images": {
