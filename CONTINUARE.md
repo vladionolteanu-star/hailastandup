@@ -7,7 +7,7 @@ Copiază tot ce e mai jos într-o sesiune nouă.
 Continuăm la **hailastandup.ro**, agregator public de stand-up românesc. Codul e în
 `c:\Users\volteanu\Downloads\ticketing-platform\site` (repo git, branch `main`, deploy automat
 pe Vercel la push). Strategia e în `PRODUCT.md` din rădăcina proiectului, arhitectura în
-`site/README.md`. Ultimul commit: `f1e635a`.
+`site/README.md`. Ultimul commit: `35d6d31` (nepushat — push înseamnă deploy).
 
 ## Cum lucrăm
 
@@ -40,8 +40,10 @@ Prima pagină, `public/index.html`:
   de zile.
 
 Pagina de artist, `public/comedianti/artist.html`, servită la `/comedianti/:slug` printr-o
-rescriere din `vercel.json`. Există una singură, ca model: **`/comedianti/micul-toma`**, cu
-rafturile Date anunțate, Specialuri, Momente și seturi, Clipuri scurte.
+rescriere din `vercel.json`. **Toate cele nouă canale active au pagină**, de la
+`/comedianti/micul-toma` la `/comedianti/bordea`. Rafturile — Date anunțate, Specialuri,
+Momente și seturi, Clipuri scurte — apar doar când au ce arăta, iar în ele stă **cel mai
+vizionat primul**, nu cel mai nou. Cele 12 nume din feedul de acasă duc la paginile lor.
 
 ## Datele
 
@@ -49,7 +51,7 @@ rafturile Date anunțate, Specialuri, Momente și seturi, Clipuri scurte.
 |---|---|---|
 | iaBilet, scrape | showuri, ore, tarife, epuizat | `public/data/events.js`, `/api/events` |
 | YouTube RSS | ultimele clipuri, pentru feedul de acasă | `public/data/clipuri.js`, `/api/clipuri` |
-| YouTube Data API v3 | arhiva completă, cu durată | `public/data/arhiva.js` |
+| YouTube Data API v3 | arhiva completă, cu durată | `public/data/arhiva/<slug>.js` |
 
 ```bash
 npm run dev        # servește public/ pe :3000
@@ -58,7 +60,9 @@ npm run clipuri    # reface feedul de clipuri recente
 npm run arhiva     # reface arhiva completă (cere YOUTUBE_API_KEY)
 ```
 
-Cheia e în `site/.env.local`, fișier aflat în `.gitignore`.
+Cheia e în `site/.env.local`, fișier aflat în `.gitignore`. **Pe Vercel nu e nevoie de ea**:
+culesul se face local, iar `public/data/arhiva/` intră în repo. Nicio funcție din `api/` n-o
+citește.
 
 **Reguli de date câștigate greu, nu le pierde:**
 
@@ -66,6 +70,18 @@ Cheia e în `site/.env.local`, fișier aflat în `.gitignore`.
 - **Durata singură nu identifică un special.** Pe canalul lui micul Toma cele mai lungi clipuri
   sunt livestreamuri de două ore. Marcajul din **titlu** decide ce e stand-up, durata decide
   ce fel de stand-up e. Descrierea nu se folosește. Vezi `scraper/fel.mjs`.
+- **Nu există „canal doar de stand-up".** Toate cele nouă rulează și altceva pe același canal:
+  „Colegi de cameră" la Bordea, „Popesco Show" la Popesco, „CineȘtieCe" la Teo, „M am convins"
+  la Vio. Vechea `politica: 'standup'` trecea 111 episoade de podcast drept specialurile lui
+  Bordea. Regula e una singură acum, aceeași pentru toți.
+- **Un număr de episod bate orice marcaj.** „StandUp cu Bieber | USP S5E01" e episodul 1 din
+  sezonul 5, nu un special de 45 de minute.
+- **Seriile se numără DOAR pe titlurile fără marcaj.** Altfel numele unui special, repetat pe
+  extrasele lui, trece drept serie și scoate exact ce e mai bun de pe canal — așa cădea
+  „Zâmbete și Empatie" al lui Micutzu, 5,8 milioane de vizionări.
+- **`npx serve` nu poate verifica pagina de artist**: face redirect pe clean-URLs și pierde
+  query-ul, deci slugul nu ajunge niciodată în pagină. Verificarea cere un server care aplică
+  rescrierea din `vercel.json`, `/comedianti/:slug` → `artist.html`.
 - **ID-ul de canal se ia din `<link rel="canonical">`** al paginii de canal, verificat cu
   `externalId` și cu id-ul din RSS. Primul `channelId` din HTML e al unui raft lateral.
 - **Alias-urile de artist sunt nume exacte.** Datele conțin și „Toma", și „Adelina Toma"; și
@@ -79,15 +95,12 @@ Cheia e în `site/.env.local`, fișier aflat în `.gitignore`.
 
 ## Ce urmează, în ordine
 
-1. **`YOUTUBE_API_KEY` pe Vercel** — Settings → Environment Variables. Local merge, în producție
-   nu. (Ăsta e pe mine, spune-mi dacă n-am făcut-o.)
-2. **Arhiva pentru celelalte 8 canale active** din `scraper/canale.mjs`. Când există, numele din
-   feedul de acasă devin automat linkuri către paginile lor. Costă ~150 din 10.000 de unități/zi.
-3. **Cârligul de newsletter pe blocul de weekend** — „anunță-mă ce apare pentru weekendul ăsta".
+1. **Push.** Commitul `35d6d31` stă local; push înseamnă deploy pe Vercel.
+2. **Cârligul de newsletter pe blocul de weekend** — „anunță-mă ce apare pentru weekendul ăsta".
    Un rând, nu o secțiune. Am fost de acord să intre, l-am amânat.
-4. **Legătura show → artist**: cardul de show listează comedianții, fiecare cu link către pagina
+3. **Legătura show → artist**: cardul de show listează comedianții, fiecare cu link către pagina
    lui. Asta închide bucla „văd un clip, ajung la artist, cumpăr bilet".
-5. **Podcasturi și emisiuni** — DA BRAVO!, Niște Oameni, Vorba lui Jerry, The Fool Club sunt deja
+4. **Podcasturi și emisiuni** — DA BRAVO!, Niște Oameni, Vorba lui Jerry, The Fool Club sunt deja
    verificate în `canale.mjs` cu `activ: false`. Ideea mea: rezumat automat, „unde s-a râs cel
    mai mult", din transcript. De discutat înainte de construit.
 
