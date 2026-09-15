@@ -10,7 +10,13 @@ Strategia și deciziile blocate sunt în `PRODUCT.md`, în rădăcina proiectulu
 
 | | |
 |---|---|
-| `public/index.html` | Pagina. HTML, CSS și JS inline, fără build. |
+| `pagini/acasa.html` | Șablonul primei pagini, cu JS-ul din browser. Îl umple `api/acasa.js`. |
+| `pagini/comediant.html` | Șablonul paginii de comediant. Îl umple `api/comediant.js`. |
+| `public/randare.js` | Randarea comună: aceleași funcții scriu HTML-ul pe server și în browser. |
+| `lib/sit.mjs` | Ce au în comun paginile de pe server: datele de pe disc, capul paginii, răspunsul. |
+| `lib/dev.mjs` | Serverul local, cu rescrierile și funcțiile din `vercel.json`. |
+| `api/acasa.js`, `api/comediant.js` | Paginile, randate pe server. |
+| `api/sitemap.js` | `/sitemap.xml`: prima pagină și paginile de comediant. |
 | `public/data/events.js` | Snapshotul de evenimente, cu câmpurile derivate incluse. |
 | `scraper/iabilet.mjs` | Parsarea listingului de pe iaBilet și câmpurile derivate. |
 | `scraper/titlu.mjs` | Curăță titlul de oraș, sală, categorie și sufixul de repriză. |
@@ -158,9 +164,8 @@ păstrate.
 
 ### Pagina de artist
 
-`public/comedianti/artist.html`, servită la `/comedianti/:slug` printr-o rescriere din
-`vercel.json`. Slugul nu se știe când se scrie pagina, deci arhiva lui se încarcă abia după ce
-îl citim din URL — de aici fișierul pe artist, nu unul pentru toți.
+`pagini/comediant.html`, randată de `api/comediant.js` la `/comedianti/:slug`. Slugurile care nu
+sunt în `artisti.js` dau 404, iar serverul pune în pagină doar arhiva comediantului cerut.
 
 Rafturile — Date anunțate, Specialuri, Momente și seturi, Clipuri scurte — apar doar când au
 ce arăta: Vio n-are niciun special, deci pe pagina lui nu există raft de specialuri. În
@@ -174,7 +179,39 @@ shorturi ale lui Vio, cel mai vizionat primul, e exact ce caută omul care a nim
 ### Calendarul
 
 42 de zile de la azi, cu numărul de showuri sub fiecare dată, weekendurile marcate discret,
-zilele goale stinse și neinteractive. Click pe o zi înseamnă `?zi=`, deci link partajabil.
+zilele goale stinse și neinteractive. Click pe o zi înseamnă `?zi=`, deci link partajabil. Ziua
+de azi duce la `/`, ca aceeași pagină să nu aibă două adrese.
+
+## Randare pe server și căutare
+
+Până pe 15 septembrie 2026 paginile se desenau doar din JS. ChatGPT, Claude și Perplexity nu
+rulează JS, deci vedeau un `<h1>` gol; toate paginile de comediant aveau același titlu,
+„Comediant · hailastandup", iar `/comedianti/orice` răspundea 200.
+
+Acum `vercel.json` rescrie `/`, `/comedianti/:slug` și `/sitemap.xml` spre funcții. **Vercel
+servește fișierul static înaintea rescrierii**, deci șabloanele stau în `pagini/`, nu în
+`public/`: un `public/index.html` ar ține `/` departe de `api/acasa.js` pentru totdeauna.
+
+- **O singură randare.** `public/randare.js` scrie HTML-ul și pe server, și în browser. Serverul
+  pune pe fiecare bloc amprenta lui (`data-h`), iar browserul rescrie un bloc doar când iese
+  altfel: alt oraș, un filtru, date live noi. La pornire nu rescrie nimic.
+- **Ora României în ambele locuri.** Serverul Vercel e pe UTC. Dacă fiecare și-ar socoti „azi"
+  după ceasul propriu, după miezul nopții serverul și pagina ar vedea zile diferite.
+- **Funcțiile citesc snapshotul de pe disc, nu iaBilet.** Răspunsul stă 5 minute la marginea
+  Vercel. Prospețimea live rămâne treaba browserului, prin `/api/events`.
+- **Adresa canonică e `https://www.hailastandup.ro`.** `hailastandup.ro` redirecționează acolo
+  din setările de domeniu Vercel, iar adresele `*.vercel.app` de producție, din `vercel.json`.
+- **`?zi=` și `?cauta=` sunt `noindex, follow`.** Bune de trimis cuiva, nu de indexat.
+- **`robots.txt` închide `/api/`.** O cerere la `/api/events` scrapează iaBilet.
+- **Schema: WebSite și Organization pe prima pagină, Person pe comediant.** **Nu Event** pe
+  paginile de listă. Google: „Each event MUST have a unique URL (a leaf page) and markup on that
+  URL". Event intră odată cu pagina de spectacol.
+- **Pictograma** e „h" din Geist SemiBold pe `#1b1c1f`: `favicon.ico` (16, 32, 48), `icon.svg`,
+  `apple-touch-icon.png`, `icon-192.png`, `icon-512.png`, `icon-maskable.png`. Imaginea de
+  distribuire e `og.png`, 1200×630. Pe comediant, distribuirea ia miniatura celui mai văzut
+  material.
+- **Vercel Web Analytics** e pus în pagină doar pe Vercel și cere activare din dashboard. Nu
+  folosește cookie-uri.
 
 ## Cine e scos de pe site
 
@@ -229,7 +266,7 @@ verificabilă, câmpul nu apare.
 ## Local
 
 ```bash
-npm run dev               # servește public/ pe :3000
+npm run dev               # public/ plus rescrierile și funcțiile din vercel.json, pe :3000
 npm run snapshot          # reface snapshotul de evenimente
 npm run arhiva            # reface arhiva pe artist (cere YOUTUBE_API_KEY, doar local)
 npm run clipuri           # reface banda „Ce merită văzut" din arhivă, după arhiva

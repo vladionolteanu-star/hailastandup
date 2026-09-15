@@ -21,8 +21,9 @@ pe Vercel la push). Strategia e în `PRODUCT.md` din rădăcina proiectului, arh
   cu același nume nu sunt dovezi. Adu-mi lista cu propunerile, eu confirm sau tai.
 - **Verifică în browser înainte să spui că e gata.** Screenshot la 1440 și 390, light și dark,
   plus verificare de erori JS, imagini rupte și scroll orizontal. Fără dovadă, nu e terminat.
-  Browserele sunt în `%LOCALAPPDATA%\ms-playwright`; scratchpadul se golește între sesiuni, deci
-  `playwright-core` se reinstalează acolo și se pornește cu `executablePath` spre chromium.
+  Serverul local e `npm run dev`. Browserele sunt în `%LOCALAPPDATA%\ms-playwright`; scratchpadul
+  se golește între sesiuni, deci `playwright-core` se reinstalează acolo și se pornește cu
+  `executablePath` spre chromium.
 - **Gust vizual:** near-monochrome, o singură familie de literă (Geist), 1px borders, culoarea
   vine din afișe și miniaturi. Reper: midday, dub, Linear, shadcn. Nu tipografie editorială,
   nu culoare de brand dominantă, nu motion exagerat.
@@ -32,7 +33,11 @@ pe Vercel la push). Strategia e în `PRODUCT.md` din rădăcina proiectului, arh
 
 ## Ce e live acum
 
-Prima pagină, `public/index.html`:
+Ambele pagini sunt **randate pe server** (`api/acasa.js`, `api/comediant.js`) din șabloanele din
+`pagini/`, cu funcțiile din `public/randare.js`, aceleași pe care le folosește și browserul. Vezi
+„Randare pe server și căutare" în `README.md`.
+
+Prima pagină, `pagini/acasa.html`:
 
 - **Header**: marcă, căutare (comediant / club / oraș, cu `/` pe tastatură), selector de oraș.
 - **Bandă de calendar**: 42 de zile, cu numărul de showuri sub fiecare dată.
@@ -44,10 +49,15 @@ Prima pagină, `public/index.html`:
   zile, pentru toți comedianții urmăriți care au unul, ordonate după vizionări. Primele opt se
   văd, restul vin la „Încă". Banda nu spune câți comedianți sunt.
 
-Pagina de artist, `public/comedianti/artist.html`, servită la `/comedianti/:slug` printr-o
-rescriere din `vercel.json`. **Toate cele 30 de canale active au pagină.** Rafturile — Date
-anunțate, Specialuri, Momente și seturi, Clipuri scurte — apar doar când au ce arăta, iar în
-ele stă **cel mai vizionat primul**, nu cel mai nou. Numele din bandă duc la paginile lor.
+Pagina de artist, `pagini/comediant.html`, la `/comedianti/:slug`. **Toate cele 30 de canale
+active au pagină**, orice alt slug dă 404. Rafturile — Date anunțate, Specialuri, Momente și
+seturi, Clipuri scurte — apar doar când au ce arăta, iar în ele stă **cel mai vizionat primul**,
+nu cel mai nou. Numele din bandă duc la paginile lor.
+
+**Căutare și distribuire**, din 15 septembrie 2026: titlu și descriere proprii pe fiecare pagină,
+adresa canonică `https://www.hailastandup.ro`, `robots.txt`, `/sitemap.xml`, pictograma „h" pe
+cărbune, `og.png` pentru distribuire, schema WebSite și Organization pe prima pagină, Person pe
+comediant.
 
 Canalele au crescut de la 9 la 30 pe 14 septembrie 2026, din lineupurile săptămânii 14–20
 septembrie, cu fiecare potrivire confirmată de mine.
@@ -60,7 +70,7 @@ septembrie, cu fiecare potrivire confirmată de mine.
 | YouTube Data API v3 | arhiva completă, cu durată | `public/data/arhiva/<slug>.js`, apoi banda din `public/data/clipuri.js` |
 
 ```bash
-npm run dev        # servește public/ pe :3000
+npm run dev        # public/ plus rescrierile și funcțiile din vercel.json, pe :3000
 npm run snapshot   # reface showurile de pe iaBilet
 npm run arhiva     # reface arhiva pe artist (cere YOUTUBE_API_KEY)
 npm run clipuri    # reface banda „Ce merită văzut" din arhivă, după arhiva
@@ -93,9 +103,11 @@ citește.
 - **Cine e scos de pe site stă în `scraper/exclusi.mjs`.** Showurile doar cu ei nu se listează,
   din cele comune le dispare numele, clipurile care îi pomenesc ies din arhivă. Nu readuce pe
   nimeni de acolo fără să mă întrebi, și nu le scrie numele în documentație.
-- **`npx serve` nu poate verifica pagina de artist**: face redirect pe clean-URLs și pierde
-  query-ul, deci slugul nu ajunge niciodată în pagină. Verificarea cere un server care aplică
-  rescrierea din `vercel.json`, `/comedianti/:slug` → `artist.html`.
+- **Vercel servește fișierul static înaintea rescrierii.** De aceea șabloanele stau în `pagini/`,
+  nu în `public/`. Local, `npm run dev` aplică rescrierile și rulează funcțiile; `npx serve` nu
+  vede paginile deloc.
+- **Schema Event doar pe pagina unui singur spectacol.** Google: „Each event MUST have a unique
+  URL (a leaf page) and markup on that URL". Pe prima pagină și pe cea de comediant nu intră.
 - **ID-ul de canal se ia din `<link rel="canonical">`** al paginii de canal, verificat cu
   `externalId` și cu id-ul din RSS. Primul `channelId` din HTML e al unui raft lateral. Când
   RSS-ul dă 404, a treia cale e `channels.list` cu `forHandle`.
@@ -120,6 +132,12 @@ citește.
 
 ## Deschise
 
+- **De făcut de mine, pentru căutare.** Google Search Console: proprietate de domeniu, verificată
+  cu un TXT în DNS-ul de pe Vercel, apoi trimis `/sitemap.xml`. Bing Webmaster Tools: importat
+  din Search Console. Web Analytics: activat din dashboardul Vercel — scriptul e deja în pagină
+  și dă 404 până atunci.
+- **Cea mai mare pârghie de căutare rămasă e pagina de spectacol**, `/spectacole/<slug>` din
+  `PRODUCT.md`: Google afișează rezultate de eveniment doar pentru pagini cu un singur spectacol.
 - Din lineupurile săptămânii 14–20 septembrie, fără canal găsit: Ioana State, Denise Alexe,
   Maria Popovici, MC Popică, Beni, Havri, Sașa, Anisia, Dan Birtaș, Bogdan Tătaru, Mitran.
   Necăutați, fiindcă parserul îi pierdea: Mirică, Nego, Adelina.

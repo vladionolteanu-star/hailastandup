@@ -7,6 +7,15 @@
     },
     "api/event.js": {
       "maxDuration": 20
+    },
+    "api/acasa.js": {
+      "includeFiles": "{pagini/acasa.html,public/data/events.js,public/data/clipuri.js,public/data/artisti.js}"
+    },
+    "api/comediant.js": {
+      "includeFiles": "{pagini/comediant.html,public/data/events.js,public/data/artisti.js,public/data/arhiva/*.js}"
+    },
+    "api/sitemap.js": {
+      "includeFiles": "{public/data/events.js,public/data/artisti.js,public/data/arhiva/*.js}"
     }
   },
   "images": {
@@ -41,10 +50,38 @@
       }
     ]
   },
+  "redirects": [
+    {
+      "source": "/:cale*",
+      "has": [{ "type": "host", "value": "hailastandup.vercel.app" }],
+      "destination": "https://www.hailastandup.ro/:cale*",
+      "permanent": true
+    },
+    {
+      "source": "/:cale*",
+      "has": [{ "type": "host", "value": "hailastandup-vlad-star-s-projects.vercel.app" }],
+      "destination": "https://www.hailastandup.ro/:cale*",
+      "permanent": true
+    },
+    {
+      "source": "/:cale*",
+      "has": [{ "type": "host", "value": "hailastandup-git-main-vlad-star-s-projects.vercel.app" }],
+      "destination": "https://www.hailastandup.ro/:cale*",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     {
+      "source": "/",
+      "destination": "/api/acasa"
+    },
+    {
       "source": "/comedianti/:slug",
-      "destination": "/comedianti/artist.html"
+      "destination": "/api/comediant?slug=:slug"
+    },
+    {
+      "source": "/sitemap.xml",
+      "destination": "/api/sitemap"
     }
   ]
 }

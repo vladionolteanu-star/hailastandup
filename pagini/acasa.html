@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+{{cap}}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400..600&display=swap">
+<link rel="stylesheet" href="/stil.css">
+</head>
+<body>
+
+<header class="sus">
+  <div class="lat sus__in">
+    <a class="marca" href="/">hailastandup</a>
+
+    <div class="cauta">
+      <svg class="cauta__lupa" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <circle cx="7.2" cy="7.2" r="4.6" stroke="currentColor" stroke-width="1.5"/>
+        <path d="m10.8 10.8 2.7 2.7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <input id="q" type="text" autocomplete="off" spellcheck="false"
+             placeholder="Caută un comediant, un club, un oraș"
+             role="combobox" aria-expanded="false" aria-controls="rez" aria-autocomplete="list"
+             aria-label="Caută un comediant, un club sau un oraș">
+      <kbd>/</kbd>
+      <div class="panou panou--cauta" id="rez" role="listbox" hidden></div>
+    </div>
+
+    <div class="invelis-oras">
+      <button class="oras" id="btn-oras" type="button" aria-expanded="false" aria-haspopup="true">
+        <span id="oras-nume">București</span>
+        <svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+          <path d="M2.6 4.6 6 8l3.4-3.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <div class="panou panou--oras" id="panou-oras" role="menu" hidden></div>
+    </div>
+  </div>
+</header>
+
+<main class="lat">
+  <div class="cap">
+    <div>
+      <h1 id="titlu-zi">{{titlu}}</h1>
+      <p id="meta-zi" class="nums">{{meta}}</p>
+    </div>
+    <div class="cap__dr" id="cap-dr" data-h="{{h-capDr}}">{{capDr}}</div>
+  </div>
+  <div class="calendar" id="calendar" role="group" aria-label="Alege o zi" data-h="{{h-calendar}}">{{calendar}}</div>
+  <div class="benzi" id="benzi" data-h="{{h-benzi}}">{{benzi}}</div>
+  <div id="urmeaza" data-h="{{h-urmeaza}}">{{urmeaza}}</div>
+  <div id="clipuri" data-h="{{h-clipuri}}">{{clipuri}}</div>
+</main>
+
+<footer class="lat subsol" id="subsol">{{subsol}}</footer>
+
+<script src="/data/events.js"></script>
+<script src="/data/clipuri.js"></script>
+<script src="/data/artisti.js"></script>
+<script src="/randare.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var R = window.Randare;
+  var D = window.EVENTS_DATA;
+  var esc = R.esc;
+  var plat = R.plat;
+  var $ = function (s) { return document.querySelector(s); };
+  var params = new URLSearchParams(location.search);
+
+  var AZI_REAL = R.ceas().zi;
+  var ZI = /^\d{4}-\d{2}-\d{2}$/.test(params.get('zi') || '') ? params.get('zi') : AZI_REAL;
+  var PE_VERCEL = location.protocol === 'https:' && !/^(localhost|127\.|\[?::1)/.test(location.hostname);
+
+  /* ---------- stare ---------- */
+
+  var orasSalvat = null;
+  try { orasSalvat = localStorage.getItem('hls.oras'); } catch (err) { orasSalvat = null; }
+
+  var stare = { oras: orasSalvat || 'București', filtru: null };
+
+  /* ---------- index de căutare, doar peste ce nu a trecut ---------- */
+
+  var SHOWURI = [];
+  var VIITOARE = [];
+  var INDEX = { nume: [], sala: [], oras: [] };
+  var ORASE = [];
+
+  function construieste() {
+    SHOWURI = R.showuri(D.events);
+    VIITOARE = SHOWURI.filter(function (e) { return (e.endDate || e.startDate) >= AZI_REAL; });
+
+    INDEX = {
+      nume: indexeaza(function (e) { return e.nume || []; }),
+      sala: indexeaza(function (e) { return [e.venue]; }),
+      oras: indexeaza(function (e) { return [e.oras]; })
+    };
+
+    ORASE = INDEX.oras
+      .map(function (o) { return { nume: o.eticheta, n: o.ev.length }; })
+      .sort(function (a, b) { return b.n - a.n || a.nume.localeCompare(b.nume, 'ro'); });
+
+    /* Filtrul activ tine referinte la obiectele vechi; il leg din nou de indexul nou. */
+    if (stare.filtru) {
+      var proaspat = INDEX[stare.filtru.tip].find(function (o) { return o.cheie === stare.filtru.cheie; });
+      stare.filtru = proaspat
+        ? { tip: stare.filtru.tip, cheie: proaspat.cheie, eticheta: proaspat.eticheta, ev: proaspat.ev }
+        : null;
+    }
+  }
+
+  function indexeaza(cheieDin) {
+    var m = new Map();
+    VIITOARE.forEach(function (e) {
+      cheieDin(e).forEach(function (brut) {
+        if (!brut) return;
+        var k = plat(brut);
+        if (k.length < 2) return;
+        if (!m.has(k)) m.set(k, { variante: new Map(), ev: [] });
+        var g = m.get(k);
+        g.variante.set(brut, (g.variante.get(brut) || 0) + 1);
+        g.ev.push(e);
+      });
+    });
+    /* Sursa scrie si "DAN BADEA", si "Dan Badea". Castiga forma cea mai frecventa. */
+    return Array.from(m.entries()).map(function (par) {
+      var variante = Array.from(par[1].variante.entries()).sort(function (a, b) { return b[1] - a[1]; });
+      return { cheie: par[0], eticheta: variante[0][0], ev: par[1].ev };
+    });
+  }
+
+  /* ---------- randare ---------- */
+
+  function blocDeschis(tip) {
+    try { return localStorage.getItem('hls.bloc.' + tip) !== 'inchis'; } catch (err) { return true; }
+  }
+  function salveazaBloc(tip, deschis) {
+    try { localStorage.setItem('hls.bloc.' + tip, deschis ? 'deschis' : 'inchis'); } catch (err) { /* mod privat */ }
+  }
+
+  var C = window.CLIPURI_DATA || { clipuri: [] };
+  var CU_PAGINA = window.ARTISTI_CU_PAGINA || [];
+  var clipuriAratate = R.CLIPURI_PAS;
+
+  /* Serverul a scris deja pagina. Un bloc se rescrie doar când iese altfel: alt oraș, un filtru,
+   * date live noi. Altfel afișele s-ar recrea degeaba la pornire. */
+  function pune(el, html) {
+    var h = R.amprenta(html);
+    if (el.getAttribute('data-h') === h) return;
+    el.innerHTML = html;
+    el.setAttribute('data-h', h);
+  }
+
+  function randeaza() {
+    var p = R.acasa({
+      showuri: SHOWURI, azi: AZI_REAL, zi: ZI, acum: R.ceas().minute,
+      oras: stare.oras, filtru: stare.filtru, peVercel: PE_VERCEL, deschis: blocDeschis,
+      clipuri: C, clipuriAratate: clipuriAratate, cuPagina: CU_PAGINA, scrapedAt: D.scrapedAt
+    });
+
+    $('#titlu-zi').textContent = p.titlu;
+    $('#meta-zi').textContent = p.meta;
+    pune($('#cap-dr'), p.capDr);
+    pune($('#calendar'), p.calendar);
+    pune($('#benzi'), p.benzi);
+    pune($('#urmeaza'), p.urmeaza);
+    pune($('#clipuri'), p.clipuri);
+    $('#subsol').textContent = p.subsol;
+
+    /* Ziua deschisă se aduce în centrul benzii, fără să miște pagina pe verticală. */
+    var cal = $('#calendar');
+    var ales = cal.querySelector('.zi-cal--ales');
+    if (ales) cal.scrollLeft = ales.offsetLeft - cal.clientWidth / 2 + ales.offsetWidth / 2;
+  }
+
+  /* Blocurile pliabile, „Încă" și ștergerea filtrului se ascultă o dată, pe document: butoanele
+   * vin când din HTML-ul serverului, când din randare, și nu au ascultători proprii. */
+  document.addEventListener('click', function (ev) {
+    var bloc = ev.target.closest('[data-bloc]');
+    if (bloc) {
+      var deschis = bloc.getAttribute('aria-expanded') !== 'true';
+      bloc.setAttribute('aria-expanded', String(deschis));
+      bloc.closest('.bloc').querySelector('.bloc__corp').hidden = !deschis;
+      salveazaBloc(bloc.getAttribute('data-bloc'), deschis);
+    } else if (ev.target.closest('[data-mai-clipuri]')) {
+      clipuriAratate += R.CLIPURI_PAS;
+      randeaza();
+    } else if (ev.target.closest('#sterge-filtru')) {
+      stare.filtru = null;
+      $('#q').value = '';
+      randeaza();
+    }
+  });
+  document.addEventListener('submit', function (ev) {
+    if (ev.target.id === 'forma-gol') ev.preventDefault();
+  });
+
+  /* ---------- oraș ---------- */
+
+  var btnOras = $('#btn-oras');
+  var panouOras = $('#panou-oras');
+
+  function randeazaOrase() {
+    panouOras.innerHTML =
+      '<div class="panou__grup">Orașul tău</div>' +
+      ORASE.slice(0, 14).map(function (o) {
+        return '<button class="optiune" type="button" role="menuitem" data-oras="' + esc(o.nume) + '"' +
+          ' data-activ="' + (o.nume === stare.oras ? 'da' : 'nu') + '">' +
+          '<span>' + esc(o.nume) + '</span><em>' + o.n + '</em></button>';
+      }).join('');
+
+    Array.prototype.forEach.call(panouOras.querySelectorAll('[data-oras]'), function (b) {
+      b.addEventListener('click', function () {
+        stare.oras = b.getAttribute('data-oras');
+        try { localStorage.setItem('hls.oras', stare.oras); } catch (err) { /* mod privat */ }
+        $('#oras-nume').textContent = stare.oras;
+        inchideOras();
+        randeaza();
+      });
+    });
+  }
+
+  function deschideOras() {
+    randeazaOrase();
+    panouOras.hidden = false;
+    btnOras.setAttribute('aria-expanded', 'true');
+  }
+  function inchideOras() {
+    panouOras.hidden = true;
+    btnOras.setAttribute('aria-expanded', 'false');
+  }
+  btnOras.addEventListener('click', function () {
+    if (panouOras.hidden) { deschideOras(); } else { inchideOras(); }
+  });
+
+  /* ---------- căutare ---------- */
+
+  var q = $('#q');
+  var rez = $('#rez');
+  var optiuni = [];
+  var activ = -1;
+
+  var GRUP = { nume: 'Comedianți', sala: 'Cluburi și săli', oras: 'Orașe' };
+  var SEMN = { nume: '@', sala: '#', oras: '·' };
+
+  function cauta(text) {
+    var k = plat(text);
+    if (k.length < 2) return [];
+    function din(tip, lista, limita) {
+      return lista
+        .filter(function (o) { return o.cheie.indexOf(k) !== -1; })
+        .sort(function (a, b) {
+          var sa = a.cheie.indexOf(k) === 0 ? 0 : 1;
+          var sb = b.cheie.indexOf(k) === 0 ? 0 : 1;
+          return sa - sb || b.ev.length - a.ev.length;
+        })
+        .slice(0, limita)
+        .map(function (o) { return { tip: tip, cheie: o.cheie, eticheta: o.eticheta, ev: o.ev }; });
+    }
+    return din('nume', INDEX.nume, 5).concat(din('sala', INDEX.sala, 3), din('oras', INDEX.oras, 3));
+  }
+
+  function randeazaRezultate() {
+    if (!optiuni.length) {
+      var scris = q.value.trim().length >= 2;
+      rez.innerHTML = scris ? '<div class="panou__nimic">Nimic cu numele ăsta în datele de acum.</div>' : '';
+      rez.hidden = !scris;
+      q.setAttribute('aria-expanded', String(scris));
+      return;
+    }
+
+    var html = '';
+    var tipCurent = null;
+    optiuni.forEach(function (o, i) {
+      if (o.tip !== tipCurent) { html += '<div class="panou__grup">' + GRUP[o.tip] + '</div>'; tipCurent = o.tip; }
+      html += '<button class="optiune" type="button" role="option" data-i="' + i + '"' +
+        ' aria-selected="' + (i === activ) + '" data-activ="' + (i === activ ? 'da' : 'nu') + '">' +
+        '<i>' + SEMN[o.tip] + '</i><span>' + esc(o.eticheta) + '</span><em>' + o.ev.length + '</em></button>';
+    });
+
+    rez.innerHTML = html;
+    rez.hidden = false;
+    q.setAttribute('aria-expanded', 'true');
+
+    Array.prototype.forEach.call(rez.querySelectorAll('[data-i]'), function (b) {
+      b.addEventListener('mousedown', function (ev) {
+        ev.preventDefault();
+        alege(optiuni[+b.getAttribute('data-i')]);
+      });
+    });
+  }
+
+  function alege(o) {
+    stare.filtru = { tip: o.tip, cheie: o.cheie, eticheta: o.eticheta, ev: o.ev };
+    q.value = o.eticheta;
+    inchideCautare();
+    randeaza();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function inchideCautare() {
+    rez.hidden = true;
+    activ = -1;
+    q.setAttribute('aria-expanded', 'false');
+  }
+
+  q.addEventListener('input', function () {
+    optiuni = cauta(q.value);
+    activ = optiuni.length ? 0 : -1;
+    randeazaRezultate();
+  });
+  q.addEventListener('focus', function () {
+    if (q.value.trim().length >= 2) { optiuni = cauta(q.value); activ = optiuni.length ? 0 : -1; randeazaRezultate(); }
+  });
+  q.addEventListener('blur', function () { setTimeout(inchideCautare, 90); });
+  q.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { inchideCautare(); q.blur(); return; }
+    if (!optiuni.length || rez.hidden) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); activ = (activ + 1) % optiuni.length; randeazaRezultate(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); activ = (activ - 1 + optiuni.length) % optiuni.length; randeazaRezultate(); }
+    else if (e.key === 'Enter' && activ >= 0) { e.preventDefault(); alege(optiuni[activ]); }
+  });
+
+  document.addEventListener('keydown', function (e) {
+    var el = document.activeElement;
+    if (e.key === '/' && el !== q && !/^(INPUT|TEXTAREA)$/.test(el ? el.tagName : '')) {
+      e.preventDefault();
+      q.focus();
+      q.select();
+    }
+    if (e.key === 'Escape') inchideOras();
+  });
+  document.addEventListener('click', function (e) {
+    if (!btnOras.contains(e.target) && !panouOras.contains(e.target)) inchideOras();
+  });
+
+  /* `error` nu urca, dar se prinde in faza de captare. */
+  document.addEventListener('error', function (e) {
+    var img = e.target;
+    var cadru = img && img.tagName === 'IMG' ? img.closest('.show__afis, .clip__foto') : null;
+    if (!cadru) return;
+    var rezerva = img.getAttribute('data-rezerva');
+    if (rezerva) {
+      img.removeAttribute('data-rezerva');
+      img.removeAttribute('srcset');
+      img.src = rezerva;
+      return;
+    }
+    var titlu = img.getAttribute('alt').replace(/^(Afișul pentru |Miniatura clipului )/, '');
+    img.remove();
+    cadru.insertAdjacentHTML('afterbegin', '<span class="show__gol">' + esc(titlu) + '</span>');
+  }, true);
+
+  /* ---------- reîmprospătare live ---------- */
+
+  /*
+   * /api/events citeste listingul acum, dar fara ora si fara tarife: alea cer o cerere
+   * per spectacol si nu incap in timp. Deci listingul live spune CE se joaca si ce s-a
+   * epuizat, iar snapshotul da ora si pretul. Se imbina dupa id, nu se inlocuieste.
+   */
+  function imbina(live) {
+    var vechi = new Map(D.events.map(function (e) { return [e.id, e]; }));
+    return live.events.map(function (e) {
+      var v = vechi.get(e.id);
+      if (!v) return e;
+      return Object.assign({}, e, {
+        time: e.time || v.time,
+        tariffs: (e.tariffs && e.tariffs.length) ? e.tariffs : v.tariffs,
+        pretDeLa: e.pretDeLa != null ? e.pretDeLa : v.pretDeLa
+      });
+    });
+  }
+
+  function reimprospateaza() {
+    fetch('/api/events', { headers: { accept: 'application/json' } })
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)); })
+      .then(function (live) {
+        if (!live || !Array.isArray(live.events) || !live.events.length) return;
+        D = { source: live.source, scrapedAt: live.scrapedAt, count: live.count, events: imbina(live), live: true };
+        construieste();
+        randeaza();
+      })
+      .catch(function () { /* ramane snapshotul; e mai bine decat o pagina goala */ });
+  }
+
+  /* ---------- pornire ---------- */
+
+  $('#oras-nume').textContent = stare.oras;
+
+  /* Pe telefon nu incape intrebarea intreaga in caseta. */
+  var ingust = window.matchMedia('(max-width:680px)');
+  function placeholder() {
+    q.placeholder = ingust.matches ? 'Caută' : 'Caută un comediant, un club, un oraș';
+  }
+  placeholder();
+  ingust.addEventListener('change', placeholder);
+
+  construieste();
+
+  /* Cautarea de pe pagina de artist trimite aici, cu ?cauta=. Aplic cea mai buna potrivire. */
+  var cerut = params.get('cauta');
+  if (cerut && cerut.trim()) {
+    q.value = cerut;
+    var potriviri = cauta(cerut);
+    if (potriviri.length) {
+      stare.filtru = { tip: potriviri[0].tip, cheie: potriviri[0].cheie, eticheta: potriviri[0].eticheta, ev: potriviri[0].ev };
+    }
+  }
+
+  randeaza();
+  reimprospateaza();
+})();
+</script>
+</body>
+</html>

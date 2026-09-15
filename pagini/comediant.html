@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+{{cap}}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400..600&display=swap">
+<link rel="stylesheet" href="/stil.css">
+<style>
+.artist{padding:34px 0 6px}
+.artist h1{font-size:2rem;line-height:1.06;letter-spacing:-.032em}
+.artist__meta{margin:8px 0 0;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;font-size:13.5px;color:var(--text-2)}
+.artist__meta a{color:var(--text-2);text-decoration:underline;text-underline-offset:2px;text-decoration-color:var(--linie)}
+.artist__meta a:hover{color:var(--text)}
+.punct{width:3px;height:3px;border-radius:99px;background:var(--text-3);flex:none;align-self:center}
+
+.durata{
+  position:absolute;right:8px;bottom:8px;height:20px;padding:0 6px;
+  display:inline-flex;align-items:center;border-radius:5px;
+  background:oklch(0.16 0.004 265/.86);color:oklch(0.99 0 0);
+  font-size:11.5px;font-weight:550;font-variant-numeric:tabular-nums;
+}
+.clip--mare{grid-column:span 2}
+.clip--mare .clip__foto{aspect-ratio:16/9}
+.clip--mare .clip__foto img{object-fit:cover;object-position:center}
+.clip--mare .clip__titlu{font-size:1.05rem;font-weight:600;letter-spacing:-.018em;-webkit-line-clamp:3}
+
+@media (max-width:680px){
+  .artist h1{font-size:1.55rem}
+  .clip--mare{grid-column:span 2}
+}
+</style>
+</head>
+<body>
+
+<header class="sus">
+  <div class="lat sus__in">
+    <a class="marca" href="/">hailastandup</a>
+    <form class="cauta" id="forma-cauta" action="/" method="get">
+      <svg class="cauta__lupa" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <circle cx="7.2" cy="7.2" r="4.6" stroke="currentColor" stroke-width="1.5"/>
+        <path d="m10.8 10.8 2.7 2.7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <input id="q" name="cauta" type="text" autocomplete="off" spellcheck="false"
+             placeholder="Caută un comediant, un club, un oraș"
+             aria-label="Caută un comediant, un club sau un oraș">
+      <kbd>/</kbd>
+    </form>
+    <div class="invelis-oras">
+      <a class="oras" href="/">Toate showurile</a>
+    </div>
+  </div>
+</header>
+
+<main class="lat">
+  <div class="artist">
+    <h1 id="nume">{{nume}}</h1>
+    <p class="artist__meta" id="meta" data-h="{{h-meta}}">{{meta}}</p>
+  </div>
+  <div id="corp" data-h="{{h-corp}}">{{corp}}</div>
+</main>
+
+<footer class="lat subsol" id="subsol">{{subsol}}</footer>
+
+<script src="/data/events.js"></script>
+<script src="/randare.js"></script>
+{{arhiva}}
+<script>
+(function () {
+  'use strict';
+
+  var R = window.Randare;
+  var $ = function (s) { return document.querySelector(s); };
+  var E = window.EVENTS_DATA || { events: [] };
+  var AZI = R.ceas().zi;
+  var PE_VERCEL = location.protocol === 'https:' && !/^(localhost|127\.|\[?::1)/.test(location.hostname);
+
+  /* Serverul pune în pagină doar arhiva comediantului cerut. Pe 404 nu pune nimic și nu e ce randa. */
+  var slug = decodeURIComponent(location.pathname.replace(/\/+$/, '').split('/').pop() || '');
+  var a = window.ARHIVA_ARTIST;
+  var artist = a && a.slug === slug ? a : null;
+
+  /* Cate sunt aratate acum din fiecare raft. Restul vin la apasare, ca sa nu incarcam 135 deodata. */
+  var aratate = {};
+
+  /* Un bloc se rescrie doar când iese altfel decât l-a scris serverul. */
+  function pune(el, html) {
+    var h = R.amprenta(html);
+    if (el.getAttribute('data-h') === h) return;
+    el.innerHTML = html;
+    el.setAttribute('data-h', h);
+  }
+
+  function randeaza() {
+    var p = R.comediant({ artist: artist, events: E.events, azi: AZI, peVercel: PE_VERCEL, aratate: aratate });
+    $('#nume').textContent = p.nume;
+    pune($('#meta'), p.meta);
+    pune($('#corp'), p.corp);
+    $('#subsol').textContent = p.subsol;
+  }
+
+  /* Rafturile vin când din HTML-ul serverului, când din randare; butoanele se ascultă o dată, pe document. */
+  document.addEventListener('click', function (ev) {
+    var bloc = ev.target.closest('[data-bloc]');
+    if (bloc) {
+      var d = bloc.getAttribute('aria-expanded') !== 'true';
+      bloc.setAttribute('aria-expanded', String(d));
+      bloc.closest('.bloc').querySelector('.bloc__corp').hidden = !d;
+      return;
+    }
+    var mai = ev.target.closest('[data-mai]');
+    if (!mai || !artist) return;
+    var fel = mai.getAttribute('data-mai');
+    var r = R.RAFTURI.find(function (x) { return x.fel === fel; });
+    aratate[fel] = (aratate[fel] || r.pas) + r.pas;
+    randeaza();
+    var sec = $('#corp').querySelector('[data-sec="' + fel + '"]');
+    if (sec) sec.scrollIntoView({ block: 'nearest' });
+  });
+
+  document.addEventListener('error', function (e) {
+    var img = e.target;
+    var cadru = img && img.tagName === 'IMG' ? img.closest('.show__afis, .clip__foto') : null;
+    if (!cadru) return;
+    var r = img.getAttribute('data-rezerva');
+    if (r) { img.removeAttribute('data-rezerva'); img.removeAttribute('srcset'); img.src = r; return; }
+    var titlu = img.getAttribute('alt').replace(/^(Afișul pentru |Miniatura clipului )/, '');
+    img.remove();
+    cadru.insertAdjacentHTML('afterbegin', '<span class="show__gol">' + R.esc(titlu) + '</span>');
+  }, true);
+
+  document.addEventListener('keydown', function (e) {
+    var el = document.activeElement;
+    if (e.key === '/' && el !== $('#q') && !/^(INPUT|TEXTAREA)$/.test(el ? el.tagName : '')) {
+      e.preventDefault(); $('#q').focus();
+    }
+  });
+
+  if (artist) randeaza();
+})();
+</script>
+</body>
+</html>
