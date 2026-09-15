@@ -40,8 +40,13 @@ export const NU_E =
 /** Semnul unei emisiuni: numar de episod sau de sezon. */
 export const EPISOD = /\bep\.? ?\d+|# ?\d+|\bs\d+ ?e\d+|\bepisod|sezon/;
 
-/** O compilatie nu e un special, oricat de lunga ar fi. */
-export const BESTOF = /best of|cele mai bune|toate episoadele|compilat/;
+/** O compilatie nu e un special, oricat de lunga ar fi. Nici setul unui om dintr-un show comun:
+ *  „momentul meu in showul de la Sala Palatului" tine 48 de minute si tot nu e showul lui. */
+export const BESTOF = /best of|cele mai bune|toate episoadele|compilat|moment(ul|ele) (meu|mele)/;
+
+/** Muzica si reclama de actorie. Conteaza doar pe titlurile fara marcaj: „MASA CU ROAST | Invitat
+ *  Ionut Rusu feat. Ionut Bodonea" ramane, „DRACEA - Fara Coduri (Official Video)" nu. */
+export const MUZICA = /official (music )?video|videoclip|official audio|lyric|\bmanea(ua)?\b|showreel|\bfeat\b/;
 
 /** Se declara show intreg, nu doar „stand-up". Singurul lucru care scoate un material lung
  *  dintr-o serie recunoscuta si-l pune inapoi pe raftul de specialuri. */
@@ -76,6 +81,7 @@ export function esteStandup(titlu, canal = {}) {
   if (NU_E.test(brut.replace(/#[^\s#]+/gu, ' '))) return false;
   if (EPISOD.test(brut)) return false;
   if (MARCAJ.test(brut)) return true;
+  if (MUZICA.test(brut)) return false;
   // Fara durata nu se poate spune „e scurt, deci e o bucata". Singurul canal pe care se poate
   // trece peste asta e cel unde s-a verificat ca shorturile fara eticheta sunt tot stand-up.
   return canal.scurteFaraMarcaj === true;
@@ -110,6 +116,25 @@ export function filtreazaArhiva(canal, clipuri) {
     segmente(titlu).some((s) => serii.has(s)) ||
     trigrame(titlu).some((s) => serieInCoada.has(s));
 
+  // Formatele marcate stand-up au si ele nume care se repeta. „STAND-UP LA COMANDA" la Cirje nu
+  // intra la numaratoarea de mai sus, fiindca e marcat, dar un episod de 42 de minute tot nu e
+  // special. Se numara doar pe materialul lung, iar dupa ce cad cuvintele de stand-up trebuie sa
+  // ramana chiar un nume: „Stand-up comedy special" nu e format, iar „Radu Bucalae" nu e marcat.
+  const GENERIC = new RegExp(`${MARCAJ.source}|${SPECIAL_TARE.source}`, 'g');
+  const formate = (() => {
+    const f = new Map();
+    for (const v of clipuri) {
+      if (typeof v.durata !== 'number' || v.durata < 300) continue;
+      for (const s of new Set(segmente(v.titlu))) if (MARCAJ.test(s)) f.set(s, (f.get(s) ?? 0) + 1);
+    }
+    return new Set(
+      [...f]
+        .filter(([s, n]) => n >= 3 && !eNumeleLui(s) && s.replace(GENERIC, ' ').replace(/\s+/g, ' ').trim().length >= 4)
+        .map(([s]) => s)
+    );
+  })();
+  const eFormat = (titlu) => segmente(titlu).some((s) => formate.has(s));
+
   return clipuri
     .filter((v) => {
       const t = fara(v.titlu);
@@ -118,16 +143,18 @@ export function filtreazaArhiva(canal, clipuri) {
       // din sezonul 5 al emisiunii lui Bordea, nu un special de 45 de minute.
       if (EPISOD.test(t)) return false;
       if (MARCAJ.test(t)) return true;
+      if (MUZICA.test(t)) return false;
       if (typeof v.durata === 'number' && v.durata >= 300) return false;
       return !eSerie(v.titlu);
     })
-    .map((v) => ({ ...v, fel: felul(v.durata, v.titlu, eSerie(v.titlu)) }));
+    .map((v) => ({ ...v, fel: felul(v.durata, v.titlu, eSerie(v.titlu) || eFormat(v.titlu)) }));
 }
 
 /**
  * Praguri alese pe date reale:
- *   special — de la 40 de minute, si numai daca nu e compilatie. Ies 25 pe cele noua canale,
- *             de la „L'esprit de l'escalier" al lui Toma pana la cele patru ale lui Bordea.
+ *   special — de la 40 de minute, si numai daca nu e compilatie, setul cuiva dintr-un show comun
+ *             sau episod dintr-un format. De la „L'esprit de l'escalier" al lui Toma la „Retro
+ *             Parenting" al lui Nelu Cortea.
  *   moment  — 5 pana la 40 de minute. Un set de club, un crowdwork, o parte dintr-un show.
  *   clip    — sub 5 minute. Extrase si Shorts.
  */

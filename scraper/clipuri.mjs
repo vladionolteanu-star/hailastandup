@@ -21,8 +21,9 @@ const ARHIVA = resolve(ROOT, 'public/data/arhiva');
 const OUT = resolve(ROOT, 'public/data/clipuri.js');
 
 const ZILE = 120;
-const CATE = 12;
-const PE_ARTIST = 2; // plafon, nu cotă: cine n-are material bun pur si simplu nu intra
+// Un clip de comediant, cel mai văzut al lui din fereastră, pentru fiecare comediant care are
+// unul. Cu doi de artist și douăsprezece carduri încăpeau doar șase oameni.
+const PE_ARTIST = 1;
 
 const prag = new Date(Date.now() - ZILE * 86400000).toISOString();
 
@@ -55,8 +56,7 @@ const alese = bazin
     if (pe[c.slug] >= PE_ARTIST) return false;
     pe[c.slug]++;
     return true;
-  })
-  .slice(0, CATE);
+  });
 
 if (!alese.length) {
   console.error('Niciun clip in fereastra. Nu scriu nimic.');

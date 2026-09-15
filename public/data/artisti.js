@@ -1,1 +1,1 @@
-window.ARTISTI_CU_PAGINA = ["bordea","costel","cristi-popesco","micul-toma","micutzu","mincu","sorin-parcalab","teo","vio"];
+window.ARTISTI_CU_PAGINA = ["alex-dobrota","andrei-ciobanu","banciu","bogdan-malaele","bordea","bucalae","cosmin-natanticu","costel","cristi-popesco","dan-badea","dan-frinculescu","dracea","edi-radoiu","florentin-paune","geo-adrian","madalin-cirje","madalina-mihai","mane-voicu","micul-toma","micutzu","mihai-bobonete","mincu","nelu-cortea","raul-gheba","sorin-parcalab","teo","teodor-abagiu","victor-bara","vio","vlad-olteanu"];

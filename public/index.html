@@ -805,14 +805,20 @@
     '</div>';
   }
 
+  /* Un clip de comediant, deci lista crește cu fiecare canal urmărit. Se văd primele opt,
+   * restul vin la apăsare, ca prima pagină să nu devină un zid de miniaturi. */
+  var CLIPURI_PAS = 8;
+  var clipuriAratate = CLIPURI_PAS;
+
   function randeazaClipuri() {
     var cont = $('#clipuri');
     var lista = (C.clipuri || []).slice();
 
     if (stare.filtru || !lista.length) { cont.innerHTML = ''; return; }
 
-    var canale = new Set(lista.map(function (c) { return c.canalId; })).size;
     var deschis = blocDeschis('clipuri');
+    var vizibile = lista.slice(0, clipuriAratate);
+    var rest = lista.length - vizibile.length;
 
     cont.innerHTML =
       '<section class="bloc">' +
@@ -825,13 +831,17 @@
             '</button>' +
           '</h2>' +
           '<span class="bloc__meta nums">cele mai văzute din ultimele ' +
-            esc(plural(C.zile || 120, 'zi', 'zile')) + ', de la ' +
-            esc(plural(canale, 'comediant', 'comedianți')) + '</span>' +
+            esc(plural(C.zile || 120, 'zi', 'zile')) + '</span>' +
         '</div>' +
         '<div class="bloc__corp"' + (deschis ? '' : ' hidden') + '>' +
           '<section class="banda"><div class="banda__et"></div>' +
-            '<div class="clipuri">' + lista.map(cardClip).join('') + '</div>' +
+            '<div class="clipuri">' + vizibile.map(cardClip).join('') + '</div>' +
           '</section>' +
+          (rest > 0
+            ? '<section class="banda"><div class="banda__et"></div><div>' +
+              '<button class="mai" type="button" data-mai-clipuri>Încă ' + Math.min(rest, CLIPURI_PAS) +
+              ' din ' + rest + '</button></div></section>'
+            : '') +
         '</div>' +
       '</section>';
 
@@ -841,6 +851,12 @@
       btn.setAttribute('aria-expanded', String(d));
       cont.querySelector('.bloc__corp').hidden = !d;
       salveazaBloc('clipuri', d);
+    });
+
+    var mai = cont.querySelector('[data-mai-clipuri]');
+    if (mai) mai.addEventListener('click', function () {
+      clipuriAratate += CLIPURI_PAS;
+      randeazaClipuri();
     });
   }
 

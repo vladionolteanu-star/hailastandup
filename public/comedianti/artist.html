@@ -32,13 +32,6 @@
 .clip--mare .clip__foto img{object-fit:cover;object-position:center}
 .clip--mare .clip__titlu{font-size:1.05rem;font-weight:600;letter-spacing:-.018em;-webkit-line-clamp:3}
 
-.mai{
-  margin-top:20px;height:34px;padding:0 14px;
-  border:1px solid var(--linie);border-radius:var(--r-ctl);background:var(--bg);
-  font-size:13.5px;font-weight:550;cursor:pointer;transition:background .16s var(--e);
-}
-.mai:hover{background:var(--panou)}
-
 @media (max-width:680px){
   .artist h1{font-size:1.55rem}
   .clip--mare{grid-column:span 2}
@@ -194,7 +187,12 @@
       : 'de la ' + (Number.isInteger(e.pretDeLa) ? e.pretDeLa : e.pretDeLa.toFixed(2).replace('.', ',').replace(/,00$/, '')) + ' lei';
     return '<a class="show' + (e.soldOut ? ' show--epuizat' : '') + '" href="' + esc(e.url || '#') + '" target="_blank" rel="noopener">' +
       '<div class="show__afis">' +
-        (url ? '<img src="' + esc(url) + '" alt="Afișul pentru ' + esc(e.titlu) + '" loading="lazy" decoding="async">' : '') +
+        /* Originalul A4 lipsește uneori la sursă (turneul „Orizont Electric": 404), thumbnailul nu.
+         * Aceeași scară ca pe prima pagină: original, thumbnail, apoi cartonaș cu titlul. */
+        (url
+          ? '<img src="' + esc(url) + '"' + (e.image && e.image !== url ? ' data-rezerva="' + esc(e.image) + '"' : '') +
+            ' alt="Afișul pentru ' + esc(e.titlu) + '" loading="lazy" decoding="async">'
+          : '<span class="show__gol">' + esc(e.titlu) + '</span>') +
         (e.soldOut ? '<span class="stare stare--epuizat">Epuizat</span>' : '') +
       '</div>' +
       '<div class="show__meta nums">' + (e.time ? '<span class="show__ora">' + esc(e.time) + '</span>' : '') +
@@ -316,9 +314,13 @@
 
   document.addEventListener('error', function (e) {
     var img = e.target;
-    if (!img || img.tagName !== 'IMG') return;
+    var cadru = img && img.tagName === 'IMG' ? img.closest('.show__afis, .clip__foto') : null;
+    if (!cadru) return;
     var r = img.getAttribute('data-rezerva');
-    if (r) { img.removeAttribute('data-rezerva'); img.removeAttribute('srcset'); img.src = r; }
+    if (r) { img.removeAttribute('data-rezerva'); img.removeAttribute('srcset'); img.src = r; return; }
+    var titlu = img.getAttribute('alt').replace(/^(Afișul pentru |Miniatura clipului )/, '');
+    img.remove();
+    cadru.insertAdjacentHTML('afterbegin', '<span class="show__gol">' + esc(titlu) + '</span>');
   }, true);
 
   document.addEventListener('keydown', function (e) {

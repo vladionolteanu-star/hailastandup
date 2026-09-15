@@ -207,6 +207,12 @@ a.zi-cal:hover{background:var(--panou);border-color:var(--linie-2)}
 
 /* ---------- clipuri ---------- */
 .clipuri{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:24px 18px}
+.mai{
+  margin-top:20px;height:34px;padding:0 14px;
+  border:1px solid var(--linie);border-radius:var(--r-ctl);background:var(--bg);
+  font-size:13.5px;font-weight:550;cursor:pointer;transition:background .16s var(--e);
+}
+.mai:hover{background:var(--panou)}
 .clip{display:flex;flex-direction:column;gap:9px}
 .clip__foto{display:block}
 a.clip__cine{text-decoration:underline;text-underline-offset:2px;text-decoration-color:var(--linie)}

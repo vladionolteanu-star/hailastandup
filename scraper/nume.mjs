@@ -29,7 +29,7 @@ export function numeDinTitlu(titlu) {
     .map(x => x
       .split(/\s+[-–]\s*["“”']/)[0]            // "DAN BADEA - “Domnu’ DANUT”"
       .replace(/["“”'`]/g, '')
-      .replace(/\s+la\s+.*$/i, '')
+      .replace(/\s+(?:la|pe)\s+.*$/i, '')     // "… și Mitran pe Terasa ComicsClub!"
       .replace(/[!?.]+$/, '')
       .trim())
     .filter(x =>

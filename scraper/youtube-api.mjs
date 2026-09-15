@@ -11,6 +11,7 @@
 // Cheia se ia din YOUTUBE_API_KEY si nu se scrie niciodata in cod sau in date.
 
 import { filtreazaArhiva } from './fel.mjs';
+import { mentioneaza } from './exclusi.mjs';
 import { curataTitluClip } from './youtube.mjs';
 
 const API = 'https://www.googleapis.com/youtube/v3';
@@ -110,6 +111,8 @@ export async function arhivaCanalului(canal, { max = 5000 } = {}) {
   // `fel` vine din filtrare, nu se recalculeaza aici: acolo se stie daca titlul face parte
   // dintr-o serie, iar fara asta „STAND-UP IN AVION! | La Nea Reelu'" trece drept special.
   const clipuri = filtreazaArhiva(canal, tot)
+    // Nici clipurile altora care ii pomenesc pe cei scosi de pe site nu raman. Vezi exclusi.mjs.
+    .filter((v) => !mentioneaza(v.titlu))
     // Titlul se curata DUPA filtrare: pentru filtru hashtagurile sunt semnal („#standup"),
     // pe card sunt zgomot — „Standup - Banii de masina #standup #comedy" ocupa doua randuri.
     .map((v) => ({ ...v, titlu: curataTitluClip(v.titlu), slug: canal.slug, nume: canal.nume }))

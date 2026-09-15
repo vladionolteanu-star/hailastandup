@@ -3,6 +3,7 @@
 
 import { curataTitlu } from './titlu.mjs';
 import { numeDinTitlu } from './nume.mjs';
+import { faraExclusi } from './exclusi.mjs';
 
 export const ORIGIN = 'https://www.iabilet.ro';
 const LIST = `${ORIGIN}/bilete-stand-up-comedy?filters%5Bcategory%5D%5B0%5D=stand-up-comedy&filtersSubmitted=1`;
@@ -212,7 +213,9 @@ export function canonicOrase(events) {
 }
 
 export function payloadOf(events, extra = {}) {
-  const imbogatite = canonicOrase(events.map(imbogateste));
+  // Excluderile vin inaintea oricarui camp derivat: titlul curatat, numele si orasul se
+  // calculeaza din titlul din care numele scoase au disparut deja. Vezi exclusi.mjs.
+  const imbogatite = canonicOrase(events.map(faraExclusi).filter(Boolean).map(imbogateste));
   return {
     source: 'iabilet.ro/bilete-stand-up-comedy',
     scrapedAt: new Date().toISOString(),
